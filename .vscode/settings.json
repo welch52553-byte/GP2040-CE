@@ -5,7 +5,6 @@
         "-DSKIP_WEBBUILD=TRUE",
         "-DSKIP_SUBMODULES=TRUE"
     ],
-    "cmake.generator": "Ninja",
     "cmake.configureOnOpen": false,
     "cmake.sourceDirectory": "${workspaceFolder}",
 
