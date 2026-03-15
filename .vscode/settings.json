@@ -1,0 +1,63 @@
+{
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureArgs": [
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        "-DPICO_SDK_PATH=/opt/pico-sdk",
+        "-DSKIP_WEBBUILD=TRUE",
+        "-DSKIP_SUBMODULES=TRUE"
+    ],
+    "cmake.generator": "Ninja",
+    "cmake.configureOnOpen": false,
+    "cmake.sourceDirectory": "${workspaceFolder}",
+
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/headers/**",
+        "${workspaceFolder}/configs/Pico",
+        "${workspaceFolder}/lib/**",
+        "/opt/pico-sdk/src/**",
+        "/opt/pico-sdk/lib/**"
+    ],
+    "C_Cpp.default.defines": [
+        "PICO_BOARD=pico",
+        "PICO_PLATFORM=rp2040",
+        "GP2040_BOARDCONFIG=\"Pico\"",
+        "ANALOG_INPUT_ENABLED=1",
+        "MULTI_CHANNEL_ADC_ENABLED=1"
+    ],
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.default.cppStandard": "c++17",
+
+    "files.associations": {
+        "*.h": "c",
+        "*.cpp": "cpp",
+        "*.c": "c",
+        "CMakeLists.txt": "cmake",
+        "*.cmake": "cmake",
+        "*.pio": "c"
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/node_modules": true,
+        "build": false
+    },
+
+    "editor.formatOnSave": false,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/build": true,
+        "**/.git": true,
+        "**/lib/tinyusb": true
+    },
+
+    "terminal.integrated.env.linux": {
+        "PICO_SDK_PATH": "/opt/pico-sdk",
+        "PICO_BOARD": "pico",
+        "PICO_PLATFORM": "rp2040"
+    }
+}
