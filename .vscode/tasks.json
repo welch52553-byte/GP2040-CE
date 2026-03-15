@@ -9,16 +9,12 @@
                 "-B", "build",
                 "-G", "Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
-                "-DPICO_SDK_PATH=/opt/pico-sdk",
                 "-DSKIP_WEBBUILD=TRUE",
                 "-DSKIP_SUBMODULES=TRUE",
                 "-DGP2040_BOARDCONFIG=Pico"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "PICO_SDK_PATH": "/opt/pico-sdk"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "problemMatcher": "$gcc"
@@ -31,16 +27,12 @@
                 "-B", "build",
                 "-G", "Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
-                "-DPICO_SDK_PATH=/opt/pico-sdk",
                 "-DSKIP_WEBBUILD=TRUE",
                 "-DSKIP_SUBMODULES=TRUE",
                 "-DGP2040_BOARDCONFIG=PicoMultiADC"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "PICO_SDK_PATH": "/opt/pico-sdk"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "group": "build",
             "problemMatcher": "$gcc"
@@ -89,20 +81,6 @@
             "dependsOn": ["CMake Configure (PicoMultiADC)", "CMake Build"],
             "dependsOrder": "sequence",
             "group": "build"
-        },
-        {
-            "label": "Flash UF2 to Pico",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                "-c",
-                "UF2_FILE=$(find build -name '*.uf2' -print -quit) && if [ -n \"$UF2_FILE\" ]; then echo \"Found: $UF2_FILE\"; if [ -d /media/*/RPI-RP2 ]; then cp \"$UF2_FILE\" /media/*/RPI-RP2/ && echo 'Flashed successfully!'; else echo 'ERROR: Pico not found in BOOTSEL mode. Hold BOOTSEL and plug in USB.'; fi; else echo 'ERROR: No .uf2 file found. Build first.'; fi"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "test",
-            "problemMatcher": []
         }
     ]
 }
