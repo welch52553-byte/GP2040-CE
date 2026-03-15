@@ -1,0 +1,50 @@
+{
+    "buildType": {
+        "default": "release",
+        "description": "Build type",
+        "choices": {
+            "debug": {
+                "short": "Debug",
+                "long": "Debug build with symbols and stack guards",
+                "buildType": "Debug"
+            },
+            "release": {
+                "short": "Release",
+                "long": "Optimized release build",
+                "buildType": "Release"
+            },
+            "relwithdebinfo": {
+                "short": "RelWithDebInfo",
+                "long": "Release with debug info",
+                "buildType": "RelWithDebInfo"
+            }
+        }
+    },
+    "boardConfig": {
+        "default": "pico",
+        "description": "Board configuration",
+        "choices": {
+            "pico": {
+                "short": "Pico",
+                "long": "Raspberry Pi Pico (RP2040)",
+                "settings": {
+                    "GP2040_BOARDCONFIG": "Pico"
+                }
+            },
+            "picow": {
+                "short": "PicoW",
+                "long": "Raspberry Pi Pico W",
+                "settings": {
+                    "GP2040_BOARDCONFIG": "PicoW"
+                }
+            },
+            "picoadc": {
+                "short": "PicoMultiADC",
+                "long": "Pico with Multi-Channel ADC Support",
+                "settings": {
+                    "GP2040_BOARDCONFIG": "PicoMultiADC"
+                }
+            }
+        }
+    }
+}
