@@ -9,12 +9,16 @@
                 "-B", "build",
                 "-G", "Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
+                "-DPICO_SDK_PATH=/opt/pico-sdk",
                 "-DSKIP_WEBBUILD=TRUE",
                 "-DSKIP_SUBMODULES=TRUE",
                 "-DGP2040_BOARDCONFIG=Pico"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PICO_SDK_PATH": "/opt/pico-sdk"
+                }
             },
             "group": "build",
             "problemMatcher": "$gcc"
@@ -27,12 +31,16 @@
                 "-B", "build",
                 "-G", "Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
+                "-DPICO_SDK_PATH=/opt/pico-sdk",
                 "-DSKIP_WEBBUILD=TRUE",
                 "-DSKIP_SUBMODULES=TRUE",
                 "-DGP2040_BOARDCONFIG=PicoMultiADC"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PICO_SDK_PATH": "/opt/pico-sdk"
+                }
             },
             "group": "build",
             "problemMatcher": "$gcc"
