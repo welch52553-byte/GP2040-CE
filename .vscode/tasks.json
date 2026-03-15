@@ -1,0 +1,108 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake Configure (Pico)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-B", "build",
+                "-G", "Ninja",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DPICO_SDK_PATH=/opt/pico-sdk",
+                "-DSKIP_WEBBUILD=TRUE",
+                "-DSKIP_SUBMODULES=TRUE",
+                "-DGP2040_BOARDCONFIG=Pico"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PICO_SDK_PATH": "/opt/pico-sdk"
+                }
+            },
+            "group": "build",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "CMake Configure (PicoMultiADC)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-B", "build",
+                "-G", "Ninja",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DPICO_SDK_PATH=/opt/pico-sdk",
+                "-DSKIP_WEBBUILD=TRUE",
+                "-DSKIP_SUBMODULES=TRUE",
+                "-DGP2040_BOARDCONFIG=PicoMultiADC"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PICO_SDK_PATH": "/opt/pico-sdk"
+                }
+            },
+            "group": "build",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "CMake Build",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "build",
+                "--config", "Release",
+                "-j", "4"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc",
+            "dependsOn": []
+        },
+        {
+            "label": "Clean Build",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build", "build",
+                "--target", "clean"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Full Build (Configure + Build)",
+            "dependsOn": ["CMake Configure (Pico)", "CMake Build"],
+            "dependsOrder": "sequence",
+            "group": "build"
+        },
+        {
+            "label": "Full Build MultiADC (Configure + Build)",
+            "dependsOn": ["CMake Configure (PicoMultiADC)", "CMake Build"],
+            "dependsOrder": "sequence",
+            "group": "build"
+        },
+        {
+            "label": "Flash UF2 to Pico",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "UF2_FILE=$(find build -name '*.uf2' -print -quit) && if [ -n \"$UF2_FILE\" ]; then echo \"Found: $UF2_FILE\"; if [ -d /media/*/RPI-RP2 ]; then cp \"$UF2_FILE\" /media/*/RPI-RP2/ && echo 'Flashed successfully!'; else echo 'ERROR: Pico not found in BOOTSEL mode. Hold BOOTSEL and plug in USB.'; fi; else echo 'ERROR: No .uf2 file found. Build first.'; fi"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": []
+        }
+    ]
+}

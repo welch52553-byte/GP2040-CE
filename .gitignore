@@ -1,5 +1,4 @@
 .pio
-.vscode/
 .cache/
 node_modules/
 configs/MyBoard
@@ -8,10 +7,11 @@ build/
 
 .*.sw*
 compile_commands.json
-lib/httpd/fsdata.c
 modules/Custom.cmake
 .idea
 cmake-*
+!.vscode/cmake-kits.json
+!.vscode/cmake-variants.json
 env.ini
 
 # Container
