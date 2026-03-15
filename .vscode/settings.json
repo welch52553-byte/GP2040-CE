@@ -2,7 +2,6 @@
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureArgs": [
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-        "-DPICO_SDK_PATH=/opt/pico-sdk",
         "-DSKIP_WEBBUILD=TRUE",
         "-DSKIP_SUBMODULES=TRUE"
     ],
@@ -15,9 +14,7 @@
     "C_Cpp.default.includePath": [
         "${workspaceFolder}/headers/**",
         "${workspaceFolder}/configs/Pico",
-        "${workspaceFolder}/lib/**",
-        "/opt/pico-sdk/src/**",
-        "/opt/pico-sdk/lib/**"
+        "${workspaceFolder}/lib/**"
     ],
     "C_Cpp.default.defines": [
         "PICO_BOARD=pico",
@@ -53,11 +50,5 @@
         "**/build": true,
         "**/.git": true,
         "**/lib/tinyusb": true
-    },
-
-    "terminal.integrated.env.linux": {
-        "PICO_SDK_PATH": "/opt/pico-sdk",
-        "PICO_BOARD": "pico",
-        "PICO_PLATFORM": "rp2040"
     }
 }
