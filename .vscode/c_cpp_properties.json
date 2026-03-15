@@ -5,23 +5,11 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/headers/**",
-                "${workspaceFolder}/headers/addons/**",
-                "${workspaceFolder}/headers/configs/**",
-                "${workspaceFolder}/headers/drivers/**",
-                "${workspaceFolder}/headers/gamepad/**",
-                "${workspaceFolder}/headers/display/**",
-                "${workspaceFolder}/headers/interfaces/**",
                 "${workspaceFolder}/lib/**",
                 "${workspaceFolder}/configs/Pico",
                 "${workspaceFolder}/configs/PicoMultiADC",
                 "${workspaceFolder}/build/headers",
-                "${workspaceFolder}/build/proto",
-                "/opt/pico-sdk/src/rp2_common/**",
-                "/opt/pico-sdk/src/rp2040/**",
-                "/opt/pico-sdk/src/common/**",
-                "/opt/pico-sdk/src/boards/include/**",
-                "/opt/pico-sdk/lib/tinyusb/src/**",
-                "/usr/lib/arm-none-eabi/include/**"
+                "${workspaceFolder}/build/proto"
             ],
             "defines": [
                 "PICO_BOARD=pico",
@@ -31,7 +19,6 @@
                 "CFG_TUSB_MCU=OPT_MCU_RP2040",
                 "PICO_RP2040=1"
             ],
-            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-arm",
