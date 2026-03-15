@@ -1,1 +1,14 @@
-[]
+[
+    {
+        "name": "Pico ARM GCC - arm-none-eabi",
+        "compilers": {
+            "C": "/usr/bin/arm-none-eabi-gcc",
+            "CXX": "/usr/bin/arm-none-eabi-g++"
+        },
+        "toolchainFile": "/opt/pico-sdk/cmake/preload/toolchains/pico_arm_gcc.cmake",
+        "cmakeSettings": {
+            "PICO_SDK_PATH": "/opt/pico-sdk",
+            "CMAKE_BUILD_TYPE": "Release"
+        }
+    }
+]
