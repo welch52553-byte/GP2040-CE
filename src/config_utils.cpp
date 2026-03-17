@@ -35,6 +35,7 @@
 #include "addons/drv8833_rumble.h"
 #include "addons/gamepad_usb_host.h"
 #include "addons/he_trigger.h"
+#include "addons/multi_channel_adc.h"
 #include "addons/tg16_input.h"
 
 #include "CRC32.h"
@@ -1078,6 +1079,25 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
 
     // reminder that this must be set or else nanopb won't retain anything
     config.addonOptions.heTriggerOptions.triggers_count = HETRIGGER_COUNT;
+
+    // addonOptions.multiChannelADCOptions
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, enabled, !!MULTI_CHANNEL_ADC_ENABLED);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, steerLeftPin, MULTI_ADC_STEER_LEFT_PIN);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, steerRightPin, MULTI_ADC_STEER_RIGHT_PIN);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, throttlePin, MULTI_ADC_THROTTLE_PIN);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, brakePin, MULTI_ADC_BRAKE_PIN);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, steerLeftRest, MULTI_ADC_STEER_LEFT_REST);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, steerLeftActive, MULTI_ADC_STEER_LEFT_ACTIVE);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, steerRightRest, MULTI_ADC_STEER_RIGHT_REST);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, steerRightActive, MULTI_ADC_STEER_RIGHT_ACTIVE);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, throttleRest, MULTI_ADC_THROTTLE_REST);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, throttleActive, MULTI_ADC_THROTTLE_ACTIVE);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, brakeRest, MULTI_ADC_BRAKE_REST);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, brakeActive, MULTI_ADC_BRAKE_ACTIVE);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, deadzone, MULTI_ADC_DEADZONE);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, smoothingFactor, MULTI_ADC_SMOOTHING_FACTOR);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, oversampling, MULTI_ADC_OVERSAMPLING);
+    INIT_UNSET_PROPERTY(config.addonOptions.multiChannelADCOptions, autoCalibrate, !!MULTI_ADC_AUTO_CALIBRATE_REST);
 
     // keyboardMapping
     INIT_UNSET_PROPERTY(config.addonOptions.keyboardHostOptions, enabled, KEYBOARD_HOST_ENABLED);

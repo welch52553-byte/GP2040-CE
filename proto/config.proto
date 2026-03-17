@@ -894,6 +894,27 @@ message HETriggerOptions
     optional int32 smoothingFactor = 13;
 }
 
+message MultiChannelADCOptions
+{
+    optional bool enabled = 1;
+    optional int32 steerLeftPin = 2;
+    optional int32 steerRightPin = 3;
+    optional int32 throttlePin = 4;
+    optional int32 brakePin = 5;
+    optional int32 steerLeftRest = 6;
+    optional int32 steerLeftActive = 7;
+    optional int32 steerRightRest = 8;
+    optional int32 steerRightActive = 9;
+    optional int32 throttleRest = 10;
+    optional int32 throttleActive = 11;
+    optional int32 brakeRest = 12;
+    optional int32 brakeActive = 13;
+    optional int32 deadzone = 14;
+    optional int32 smoothingFactor = 15;
+    optional int32 oversampling = 16;
+    optional bool autoCalibrate = 17;
+}
+
 message AddonOptions
 {
     optional BootselButtonOptions bootselButtonOptions = 1;
@@ -926,6 +947,7 @@ message AddonOptions
     optional GamepadUSBHostOptions gamepadUSBHostOptions = 28;
     optional TG16Options tg16Options = 29;
     optional HETriggerOptions heTriggerOptions = 30;
+    optional MultiChannelADCOptions multiChannelADCOptions = 31;
 }
 
 message MigrationHistory

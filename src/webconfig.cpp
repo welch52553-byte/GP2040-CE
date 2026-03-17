@@ -1889,6 +1889,25 @@ std::string setAddonOptions()
     docToValue(heTriggerOptions.emaSmoothing, doc, "heTriggerSmoothing");
     docToValue(heTriggerOptions.smoothingFactor, doc, "heTriggerSmoothingFactor");
 
+    MultiChannelADCOptions& mcadcOptions = Storage::getInstance().getAddonOptions().multiChannelADCOptions;
+    docToValue(mcadcOptions.enabled, doc, "MultiChannelADCEnabled");
+    docToPin(mcadcOptions.steerLeftPin, doc, "mcadcSteerLeftPin");
+    docToPin(mcadcOptions.steerRightPin, doc, "mcadcSteerRightPin");
+    docToPin(mcadcOptions.throttlePin, doc, "mcadcThrottlePin");
+    docToPin(mcadcOptions.brakePin, doc, "mcadcBrakePin");
+    docToValue(mcadcOptions.steerLeftRest, doc, "mcadcSteerLeftRest");
+    docToValue(mcadcOptions.steerLeftActive, doc, "mcadcSteerLeftActive");
+    docToValue(mcadcOptions.steerRightRest, doc, "mcadcSteerRightRest");
+    docToValue(mcadcOptions.steerRightActive, doc, "mcadcSteerRightActive");
+    docToValue(mcadcOptions.throttleRest, doc, "mcadcThrottleRest");
+    docToValue(mcadcOptions.throttleActive, doc, "mcadcThrottleActive");
+    docToValue(mcadcOptions.brakeRest, doc, "mcadcBrakeRest");
+    docToValue(mcadcOptions.brakeActive, doc, "mcadcBrakeActive");
+    docToValue(mcadcOptions.deadzone, doc, "mcadcDeadzone");
+    docToValue(mcadcOptions.smoothingFactor, doc, "mcadcSmoothingFactor");
+    docToValue(mcadcOptions.oversampling, doc, "mcadcOversampling");
+    docToValue(mcadcOptions.autoCalibrate, doc, "mcadcAutoCalibrate");
+
     EventManager::getInstance().triggerEvent(new GPStorageSaveEvent(true));
 
     return serialize_json(doc);
@@ -2346,6 +2365,25 @@ std::string getAddonOptions()
     writeDoc(doc, "muxADCPin3", cleanPin(heTriggerOptions.muxADCPin3));
     writeDoc(doc, "heTriggerSmoothing", heTriggerOptions.emaSmoothing);
     writeDoc(doc, "heTriggerSmoothingFactor", heTriggerOptions.smoothingFactor);
+
+    const MultiChannelADCOptions& mcadcOptions = Storage::getInstance().getAddonOptions().multiChannelADCOptions;
+    writeDoc(doc, "MultiChannelADCEnabled", mcadcOptions.enabled);
+    writeDoc(doc, "mcadcSteerLeftPin", cleanPin(mcadcOptions.steerLeftPin));
+    writeDoc(doc, "mcadcSteerRightPin", cleanPin(mcadcOptions.steerRightPin));
+    writeDoc(doc, "mcadcThrottlePin", cleanPin(mcadcOptions.throttlePin));
+    writeDoc(doc, "mcadcBrakePin", cleanPin(mcadcOptions.brakePin));
+    writeDoc(doc, "mcadcSteerLeftRest", mcadcOptions.steerLeftRest);
+    writeDoc(doc, "mcadcSteerLeftActive", mcadcOptions.steerLeftActive);
+    writeDoc(doc, "mcadcSteerRightRest", mcadcOptions.steerRightRest);
+    writeDoc(doc, "mcadcSteerRightActive", mcadcOptions.steerRightActive);
+    writeDoc(doc, "mcadcThrottleRest", mcadcOptions.throttleRest);
+    writeDoc(doc, "mcadcThrottleActive", mcadcOptions.throttleActive);
+    writeDoc(doc, "mcadcBrakeRest", mcadcOptions.brakeRest);
+    writeDoc(doc, "mcadcBrakeActive", mcadcOptions.brakeActive);
+    writeDoc(doc, "mcadcDeadzone", mcadcOptions.deadzone);
+    writeDoc(doc, "mcadcSmoothingFactor", mcadcOptions.smoothingFactor);
+    writeDoc(doc, "mcadcOversampling", mcadcOptions.oversampling);
+    writeDoc(doc, "mcadcAutoCalibrate", mcadcOptions.autoCalibrate);
 
     return serialize_json(doc);
 }
