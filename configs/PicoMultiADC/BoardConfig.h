@@ -104,7 +104,7 @@
 // ============================================================
 // UART Debug Output (connect USB-TTL adapter to read)
 // ============================================================
-#define MULTI_ADC_DEBUG_ENABLED 1
+#define MULTI_ADC_DEBUG_ENABLED 0
 #define MULTI_ADC_DEBUG_UART_TX_PIN 20  // GPIO20 = UART1 TX
 
 // ============================================================
