@@ -2,6 +2,7 @@
 #include "storagemanager.h"
 #include "drivermanager.h"
 #include "helper.h"
+#include "config.pb.h"
 
 #include "hardware/adc.h"
 
@@ -9,7 +10,7 @@
 #include <cmath>
 
 bool MultiChannelADCInput::available() {
-    return MULTI_CHANNEL_ADC_ENABLED;
+    return Storage::getInstance().getAddonOptions().multiChannelADCOptions.enabled;
 }
 
 static void initChannel(hall_channel_t &ch, Pin_t pin, uint16_t rest, uint16_t active) {
@@ -30,35 +31,44 @@ static void initChannel(hall_channel_t &ch, Pin_t pin, uint16_t rest, uint16_t a
 }
 
 void MultiChannelADCInput::setup() {
+    const MultiChannelADCOptions& options = Storage::getInstance().getAddonOptions().multiChannelADCOptions;
+
     adc_init();
 
-    smoothing_factor = MULTI_ADC_SMOOTHING_FACTOR / 1000.0f;
-    deadzone = MULTI_ADC_DEADZONE / 100.0f;
-    oversampling = MULTI_ADC_OVERSAMPLING;
+    smoothing_factor = options.smoothingFactor / 1000.0f;
+    deadzone = options.deadzone / 100.0f;
+    oversampling = options.oversampling;
 
-    initChannel(steerLeft,  MULTI_ADC_STEER_LEFT_PIN,
-                MULTI_ADC_STEER_LEFT_REST,  MULTI_ADC_STEER_LEFT_ACTIVE);
-    initChannel(steerRight, MULTI_ADC_STEER_RIGHT_PIN,
-                MULTI_ADC_STEER_RIGHT_REST, MULTI_ADC_STEER_RIGHT_ACTIVE);
-    initChannel(throttle,   MULTI_ADC_THROTTLE_PIN,
-                MULTI_ADC_THROTTLE_REST,    MULTI_ADC_THROTTLE_ACTIVE);
-    initChannel(brake,      MULTI_ADC_BRAKE_PIN,
-                MULTI_ADC_BRAKE_REST,       MULTI_ADC_BRAKE_ACTIVE);
+    initChannel(steerLeft,  options.steerLeftPin,
+                options.steerLeftRest,  options.steerLeftActive);
+    initChannel(steerRight, options.steerRightPin,
+                options.steerRightRest, options.steerRightActive);
+    initChannel(throttle,   options.throttlePin,
+                options.throttleRest,   options.throttleActive);
+    initChannel(brake,      options.brakePin,
+                options.brakeRest,      options.brakeActive);
 
-    if (MULTI_ADC_AUTO_CALIBRATE_REST) {
-        if (steerLeft.enabled) {
+    if (options.autoCalibrate) {
+        if (steerLeft.enabled)
             steerLeft.rest_value = readADCOversampled(steerLeft.adc_input, 16);
-        }
-        if (steerRight.enabled) {
+        if (steerRight.enabled)
             steerRight.rest_value = readADCOversampled(steerRight.adc_input, 16);
-        }
-        if (throttle.enabled) {
+        if (throttle.enabled)
             throttle.rest_value = readADCOversampled(throttle.adc_input, 16);
-        }
-        if (brake.enabled) {
+        if (brake.enabled)
             brake.rest_value = readADCOversampled(brake.adc_input, 16);
-        }
     }
+}
+
+static void processChannel(hall_channel_t &ch, MultiChannelADCInput *self,
+                            uint8_t oversampling, float smoothing_factor, float deadzone) {
+    if (!ch.enabled) return;
+
+    ch.raw_value = self->readADCOversampled(ch.adc_input, oversampling);
+    ch.activation = self->computeActivation(ch);
+    ch.activation = self->applyEMA(ch.activation, ch.ema_value, smoothing_factor);
+    ch.ema_value = ch.activation;
+    ch.activation = self->applyDeadzone(ch.activation, deadzone);
 }
 
 void MultiChannelADCInput::process() {
@@ -69,63 +79,29 @@ void MultiChannelADCInput::process() {
         joystickMid = DriverManager::getInstance().getDriver()->GetJoystickMidValue();
     }
 
-    // --- Read and process each channel ---
+    processChannel(steerLeft, this, oversampling, smoothing_factor, deadzone);
+    processChannel(steerRight, this, oversampling, smoothing_factor, deadzone);
+    processChannel(throttle, this, oversampling, smoothing_factor, deadzone);
+    processChannel(brake, this, oversampling, smoothing_factor, deadzone);
 
-    if (steerLeft.enabled) {
-        steerLeft.raw_value = readADCOversampled(steerLeft.adc_input, oversampling);
-        steerLeft.activation = computeActivation(steerLeft);
-        steerLeft.activation = applyEMA(steerLeft.activation, steerLeft.ema_value, smoothing_factor);
-        steerLeft.ema_value = steerLeft.activation;
-        steerLeft.activation = applyDeadzone(steerLeft.activation, deadzone);
-    }
-
-    if (steerRight.enabled) {
-        steerRight.raw_value = readADCOversampled(steerRight.adc_input, oversampling);
-        steerRight.activation = computeActivation(steerRight);
-        steerRight.activation = applyEMA(steerRight.activation, steerRight.ema_value, smoothing_factor);
-        steerRight.ema_value = steerRight.activation;
-        steerRight.activation = applyDeadzone(steerRight.activation, deadzone);
-    }
-
-    if (throttle.enabled) {
-        throttle.raw_value = readADCOversampled(throttle.adc_input, oversampling);
-        throttle.activation = computeActivation(throttle);
-        throttle.activation = applyEMA(throttle.activation, throttle.ema_value, smoothing_factor);
-        throttle.ema_value = throttle.activation;
-        throttle.activation = applyDeadzone(throttle.activation, deadzone);
-    }
-
-    if (brake.enabled) {
-        brake.raw_value = readADCOversampled(brake.adc_input, oversampling);
-        brake.activation = computeActivation(brake);
-        brake.activation = applyEMA(brake.activation, brake.ema_value, smoothing_factor);
-        brake.ema_value = brake.activation;
-        brake.activation = applyDeadzone(brake.activation, deadzone);
-    }
-
-    // --- Steering: combine left + right into Left Stick X axis ---
-    // Left key pressed  → X axis moves toward 0x0000 (left)
-    // Right key pressed → X axis moves toward 0xFFFF (right)
-    // Both at rest      → X axis = center (0x7FFF)
+    // Steering: combine left + right into Left Stick X axis
     float steerLeftAct  = steerLeft.enabled  ? steerLeft.activation  : 0.0f;
     float steerRightAct = steerRight.enabled ? steerRight.activation : 0.0f;
 
-    // net steering: -1.0 (full left) to +1.0 (full right)
     float netSteering = steerRightAct - steerLeftAct;
     netSteering = std::clamp(netSteering, -1.0f, 1.0f);
 
-    // map to joystick range: center + net * half_range
     int32_t steerOutput = static_cast<int32_t>(joystickMid) +
                           static_cast<int32_t>(netSteering * joystickMid);
     gamepad->state.lx = static_cast<uint16_t>(
         std::clamp(steerOutput, (int32_t)0, (int32_t)0xFFFF));
 
-    // --- Throttle → Right Trigger (RT, 0-255) ---
+    // Throttle → Right Trigger (RT, 0-255)
     float throttleAct = throttle.enabled ? throttle.activation : 0.0f;
     gamepad->state.rt = static_cast<uint8_t>(
         std::clamp(throttleAct * 255.0f, 0.0f, 255.0f));
 
-    // --- Brake → Left Trigger (LT, 0-255) ---
+    // Brake → Left Trigger (LT, 0-255)
     float brakeAct = brake.enabled ? brake.activation : 0.0f;
     gamepad->state.lt = static_cast<uint8_t>(
         std::clamp(brakeAct * 255.0f, 0.0f, 255.0f));

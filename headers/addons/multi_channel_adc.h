@@ -120,11 +120,12 @@ public:
     virtual void reinit();
     virtual std::string name() { return MultiChannelADCName; }
 
-private:
     uint16_t readADCOversampled(uint8_t adc_input, uint8_t samples);
     float computeActivation(hall_channel_t &ch);
     float applyEMA(float current, float previous, float factor);
     float applyDeadzone(float value, float deadzone);
+
+private:
 
     hall_channel_t steerLeft;
     hall_channel_t steerRight;
