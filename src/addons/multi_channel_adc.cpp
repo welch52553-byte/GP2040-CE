@@ -74,6 +74,10 @@ static void processChannel(hall_channel_t &ch, MultiChannelADCInput *self,
 void MultiChannelADCInput::process() {
     Gamepad *gamepad = Storage::getInstance().GetGamepad();
 
+    if (throttle.enabled || brake.enabled) {
+        gamepad->hasAnalogTriggers = true;
+    }
+
     uint32_t joystickMid = GAMEPAD_JOYSTICK_MID;
     if (DriverManager::getInstance().getDriver() != nullptr) {
         joystickMid = DriverManager::getInstance().getDriver()->GetJoystickMidValue();
