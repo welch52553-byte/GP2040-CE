@@ -15,12 +15,12 @@
 // GPIO Pin Mapping
 // ============================================================
 
-// --- 4 mechanical buttons (functional buttons, pins TBD) ---
-// Using GPIO 2-5 as placeholder, user can reassign later
-#define GPIO_PIN_02 GpioAction::BUTTON_PRESS_B1     // B1 | A      | Cross
-#define GPIO_PIN_03 GpioAction::BUTTON_PRESS_B2     // B2 | B      | Circle
-#define GPIO_PIN_04 GpioAction::BUTTON_PRESS_S1     // S1 | Back   | Select
-#define GPIO_PIN_05 GpioAction::BUTTON_PRESS_S2     // S2 | Start  | Start
+// --- Mechanical buttons ---
+#define GPIO_PIN_00 GpioAction::BUTTON_PRESS_S1     // S1 | Back   | Select
+#define GPIO_PIN_01 GpioAction::BUTTON_PRESS_S2     // S2 | Start  | Start (hold on boot = WebConfig)
+#define GPIO_PIN_02 GpioAction::BUTTON_PRESS_UP     // UP | D-Pad Up
+#define GPIO_PIN_03 GpioAction::BUTTON_PRESS_DOWN   // DOWN | D-Pad Down
+#define GPIO_PIN_04 GpioAction::BUTTON_PRESS_RIGHT  // RIGHT | D-Pad Right
 
 // --- ADC pins (GPIO 26-29) assigned to MultiChannelADC addon ---
 #define GPIO_PIN_26 GpioAction::ASSIGNED_TO_ADDON   // ADC0 - Steer Left
@@ -102,8 +102,9 @@
 #define DRV8833_RUMBLE_DUTY_MAX         100.0f
 
 // ============================================================
-// Display (disabled for now)
+// Display (disabled - GPIO 0/1 used for buttons)
 // ============================================================
 #define HAS_I2C_DISPLAY 0
+#define I2C0_ENABLED 0
 
 #endif
