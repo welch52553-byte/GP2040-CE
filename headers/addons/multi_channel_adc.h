@@ -11,86 +11,88 @@
 #define MULTI_CHANNEL_ADC_ENABLED 0
 #endif
 
-// RP2040 has 4 external ADC channels: ADC0 (GPIO26) ~ ADC3 (GPIO29)
-// plus ADC4 for internal temperature sensor
-#define MULTI_ADC_MAX_CHANNELS 4
+// RP2040 ADC: 12-bit, 4 external channels (GPIO 26-29)
 #define MULTI_ADC_PIN_OFFSET 26
-#define MULTI_ADC_RESOLUTION_BITS 12
-#define MULTI_ADC_MAX_VALUE ((1 << MULTI_ADC_RESOLUTION_BITS) - 1)
+#define MULTI_ADC_MAX_VALUE ((1 << 12) - 1)
 
-#ifndef MULTI_ADC_CH0_PIN
-#define MULTI_ADC_CH0_PIN -1
+// ============================================================
+// Pin assignments: 4 hall-effect linear keys
+// ============================================================
+// ADC0 (GPIO26): Steering LEFT key
+#ifndef MULTI_ADC_STEER_LEFT_PIN
+#define MULTI_ADC_STEER_LEFT_PIN -1
 #endif
 
-#ifndef MULTI_ADC_CH1_PIN
-#define MULTI_ADC_CH1_PIN -1
+// ADC1 (GPIO27): Steering RIGHT key
+#ifndef MULTI_ADC_STEER_RIGHT_PIN
+#define MULTI_ADC_STEER_RIGHT_PIN -1
 #endif
 
-#ifndef MULTI_ADC_CH2_PIN
-#define MULTI_ADC_CH2_PIN -1
+// ADC2 (GPIO28): Throttle key
+#ifndef MULTI_ADC_THROTTLE_PIN
+#define MULTI_ADC_THROTTLE_PIN -1
 #endif
 
-#ifndef MULTI_ADC_CH3_PIN
-#define MULTI_ADC_CH3_PIN -1
+// ADC3 (GPIO29): Brake key
+#ifndef MULTI_ADC_BRAKE_PIN
+#define MULTI_ADC_BRAKE_PIN -1
 #endif
 
-#ifndef MULTI_ADC_TEMP_ENABLED
-#define MULTI_ADC_TEMP_ENABLED 0
+// ============================================================
+// Hall sensor calibration defaults
+//
+// Hall linear keys: ADC reads a "rest" value when unpressed,
+// and shifts toward "active" value when fully pressed.
+// Activation = |current - rest| / |active - rest|
+//
+// These defaults assume the ADC value INCREASES when pressed.
+// Adjust per your actual hardware measurement.
+// ============================================================
+#ifndef MULTI_ADC_STEER_LEFT_REST
+#define MULTI_ADC_STEER_LEFT_REST 512
+#endif
+#ifndef MULTI_ADC_STEER_LEFT_ACTIVE
+#define MULTI_ADC_STEER_LEFT_ACTIVE 3584
 #endif
 
-#ifndef MULTI_ADC_SMOOTHING_ENABLED
-#define MULTI_ADC_SMOOTHING_ENABLED 1
+#ifndef MULTI_ADC_STEER_RIGHT_REST
+#define MULTI_ADC_STEER_RIGHT_REST 512
+#endif
+#ifndef MULTI_ADC_STEER_RIGHT_ACTIVE
+#define MULTI_ADC_STEER_RIGHT_ACTIVE 3584
+#endif
+
+#ifndef MULTI_ADC_THROTTLE_REST
+#define MULTI_ADC_THROTTLE_REST 512
+#endif
+#ifndef MULTI_ADC_THROTTLE_ACTIVE
+#define MULTI_ADC_THROTTLE_ACTIVE 3584
+#endif
+
+#ifndef MULTI_ADC_BRAKE_REST
+#define MULTI_ADC_BRAKE_REST 512
+#endif
+#ifndef MULTI_ADC_BRAKE_ACTIVE
+#define MULTI_ADC_BRAKE_ACTIVE 3584
+#endif
+
+// ============================================================
+// Signal processing
+// ============================================================
+#ifndef MULTI_ADC_DEADZONE
+#define MULTI_ADC_DEADZONE 3
 #endif
 
 #ifndef MULTI_ADC_SMOOTHING_FACTOR
-#define MULTI_ADC_SMOOTHING_FACTOR 50
-#endif
-
-#ifndef MULTI_ADC_DEADZONE_INNER
-#define MULTI_ADC_DEADZONE_INNER 5
-#endif
-
-#ifndef MULTI_ADC_DEADZONE_OUTER
-#define MULTI_ADC_DEADZONE_OUTER 95
-#endif
-
-#ifndef MULTI_ADC_AUTO_CALIBRATE
-#define MULTI_ADC_AUTO_CALIBRATE 1
-#endif
-
-#ifndef MULTI_ADC_SAMPLE_RATE_US
-#define MULTI_ADC_SAMPLE_RATE_US 100
+#define MULTI_ADC_SMOOTHING_FACTOR 100
 #endif
 
 #ifndef MULTI_ADC_OVERSAMPLING
 #define MULTI_ADC_OVERSAMPLING 4
 #endif
 
-enum class ADCChannelMapping : uint8_t {
-    NONE = 0,
-    LEFT_STICK_X,
-    LEFT_STICK_Y,
-    RIGHT_STICK_X,
-    RIGHT_STICK_Y,
-    LEFT_TRIGGER,
-    RIGHT_TRIGGER,
-    RAW_OUTPUT,
-};
-
-#ifndef MULTI_ADC_CH0_MAPPING
-#define MULTI_ADC_CH0_MAPPING ADCChannelMapping::LEFT_STICK_X
-#endif
-
-#ifndef MULTI_ADC_CH1_MAPPING
-#define MULTI_ADC_CH1_MAPPING ADCChannelMapping::LEFT_STICK_Y
-#endif
-
-#ifndef MULTI_ADC_CH2_MAPPING
-#define MULTI_ADC_CH2_MAPPING ADCChannelMapping::RIGHT_STICK_X
-#endif
-
-#ifndef MULTI_ADC_CH3_MAPPING
-#define MULTI_ADC_CH3_MAPPING ADCChannelMapping::RIGHT_STICK_Y
+#ifndef MULTI_ADC_AUTO_CALIBRATE_REST
+#define MULTI_ADC_AUTO_CALIBRATE_REST 1
 #endif
 
 #define MultiChannelADCName "MultiChannelADC"
@@ -98,24 +100,15 @@ enum class ADCChannelMapping : uint8_t {
 typedef struct {
     Pin_t gpio_pin;
     uint8_t adc_input;
-    ADCChannelMapping mapping;
     bool enabled;
+
+    uint16_t rest_value;
+    uint16_t active_value;
 
     uint16_t raw_value;
-    float normalized_value;
-    uint16_t center_value;
+    float activation;
     float ema_value;
-
-    bool auto_calibrate;
-    uint16_t cal_min;
-    uint16_t cal_max;
-    uint16_t cal_center;
-} adc_channel_t;
-
-typedef struct {
-    float temperature_c;
-    bool enabled;
-} adc_temp_sensor_t;
+} hall_channel_t;
 
 class MultiChannelADCInput : public GPAddon {
 public:
@@ -127,28 +120,20 @@ public:
     virtual void reinit();
     virtual std::string name() { return MultiChannelADCName; }
 
-    uint16_t getRawValue(uint8_t channel);
-    float getNormalizedValue(uint8_t channel);
-    float getTemperature();
-    uint8_t getActiveChannelCount();
-
 private:
-    uint16_t readADCChannel(uint8_t adc_input);
     uint16_t readADCOversampled(uint8_t adc_input, uint8_t samples);
-    float normalizeValue(uint16_t raw, uint16_t center, uint16_t cal_min, uint16_t cal_max);
+    float computeActivation(hall_channel_t &ch);
     float applyEMA(float current, float previous, float factor);
-    float applyDeadzone(float value, float inner, float outer);
+    float applyDeadzone(float value, float deadzone);
 
-    adc_channel_t channels[MULTI_ADC_MAX_CHANNELS];
-    adc_temp_sensor_t temp_sensor;
+    hall_channel_t steerLeft;
+    hall_channel_t steerRight;
+    hall_channel_t throttle;
+    hall_channel_t brake;
 
-    uint8_t active_channels;
     float smoothing_factor;
-    float inner_deadzone;
-    float outer_deadzone;
+    float deadzone;
     uint8_t oversampling;
-    uint32_t last_sample_time;
-    uint32_t sample_interval_us;
 };
 
 #endif
