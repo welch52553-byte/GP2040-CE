@@ -95,6 +95,14 @@
 #define MULTI_ADC_AUTO_CALIBRATE_REST 1
 #endif
 
+#ifndef MULTI_ADC_DEBUG_ENABLED
+#define MULTI_ADC_DEBUG_ENABLED 0
+#endif
+
+#ifndef MULTI_ADC_DEBUG_UART_TX_PIN
+#define MULTI_ADC_DEBUG_UART_TX_PIN 20
+#endif
+
 #define MultiChannelADCName "MultiChannelADC"
 
 typedef struct {

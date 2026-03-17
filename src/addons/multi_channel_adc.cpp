@@ -5,9 +5,30 @@
 #include "config.pb.h"
 
 #include "hardware/adc.h"
+#include "hardware/uart.h"
+#include "hardware/gpio.h"
+#include "pico/time.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
+
+#if MULTI_ADC_DEBUG_ENABLED
+static uart_inst_t *debug_uart = uart1;
+static uint32_t debug_last_print_time = 0;
+static uint16_t debug_last_rumble_left = 0xFFFF;
+static uint16_t debug_last_rumble_right = 0xFFFF;
+
+static void debug_uart_init() {
+    uart_init(debug_uart, 115200);
+    gpio_set_function(MULTI_ADC_DEBUG_UART_TX_PIN, GPIO_FUNC_UART);
+}
+
+static void debug_print(const char *msg) {
+    uart_puts(debug_uart, msg);
+}
+#endif
 
 bool MultiChannelADCInput::available() {
     return Storage::getInstance().getAddonOptions().multiChannelADCOptions.enabled;
@@ -32,6 +53,11 @@ static void initChannel(hall_channel_t &ch, Pin_t pin, uint16_t rest, uint16_t a
 
 void MultiChannelADCInput::setup() {
     const MultiChannelADCOptions& options = Storage::getInstance().getAddonOptions().multiChannelADCOptions;
+
+#if MULTI_ADC_DEBUG_ENABLED
+    debug_uart_init();
+    debug_print("\r\n=== MultiChannelADC Debug Started ===\r\n");
+#endif
 
     adc_init();
 
@@ -109,6 +135,39 @@ void MultiChannelADCInput::process() {
     float brakeAct = brake.enabled ? brake.activation : 0.0f;
     gamepad->state.lt = static_cast<uint8_t>(
         std::clamp(brakeAct * 255.0f, 0.0f, 255.0f));
+
+#if MULTI_ADC_DEBUG_ENABLED
+    Gamepad *procGamepad = Storage::getInstance().GetProcessedGamepad();
+
+    // Print rumble state on every change
+    uint16_t curLeft = procGamepad->auxState.haptics.leftActuator.intensity;
+    uint16_t curRight = procGamepad->auxState.haptics.rightActuator.intensity;
+    if (curLeft != debug_last_rumble_left || curRight != debug_last_rumble_right) {
+        debug_last_rumble_left = curLeft;
+        debug_last_rumble_right = curRight;
+        char buf[80];
+        snprintf(buf, sizeof(buf), "[RUMBLE] L=%3u R=%3u active=%d/%d\r\n",
+                 curLeft, curRight,
+                 procGamepad->auxState.haptics.leftActuator.active ? 1 : 0,
+                 procGamepad->auxState.haptics.rightActuator.active ? 1 : 0);
+        debug_print(buf);
+    }
+
+    // Print ADC + output values every 500ms
+    uint32_t now = time_us_32();
+    if (now - debug_last_print_time > 500000) {
+        debug_last_print_time = now;
+        char buf[160];
+        snprintf(buf, sizeof(buf),
+                 "[ADC] SL=%4u SR=%4u TH=%4u BR=%4u | LX=%5u LT=%3u RT=%3u | act=%.2f/%.2f/%.2f/%.2f\r\n",
+                 steerLeft.raw_value, steerRight.raw_value,
+                 throttle.raw_value, brake.raw_value,
+                 gamepad->state.lx, gamepad->state.lt, gamepad->state.rt,
+                 steerLeft.activation, steerRight.activation,
+                 throttle.activation, brake.activation);
+        debug_print(buf);
+    }
+#endif
 }
 
 void MultiChannelADCInput::reinit() {

@@ -102,6 +102,12 @@
 #define DRV8833_RUMBLE_DUTY_MAX         100.0f
 
 // ============================================================
+// UART Debug Output (connect USB-TTL adapter to read)
+// ============================================================
+#define MULTI_ADC_DEBUG_ENABLED 1
+#define MULTI_ADC_DEBUG_UART_TX_PIN 20  // GPIO20 = UART1 TX
+
+// ============================================================
 // Display (disabled - GPIO 0/1 used for buttons)
 // ============================================================
 #define HAS_I2C_DISPLAY 0
