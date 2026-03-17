@@ -18,9 +18,9 @@
 // --- Mechanical buttons ---
 #define GPIO_PIN_00 GpioAction::BUTTON_PRESS_S1     // S1 | Back   | Select
 #define GPIO_PIN_01 GpioAction::BUTTON_PRESS_S2     // S2 | Start  | Start (hold on boot = WebConfig)
-#define GPIO_PIN_02 GpioAction::BUTTON_PRESS_UP     // UP | D-Pad Up
-#define GPIO_PIN_03 GpioAction::BUTTON_PRESS_DOWN   // DOWN | D-Pad Down
-#define GPIO_PIN_04 GpioAction::BUTTON_PRESS_RIGHT  // RIGHT | D-Pad Right
+#define GPIO_PIN_02 GpioAction::BUTTON_PRESS_B3     // B3 | X      | Square
+#define GPIO_PIN_03 GpioAction::BUTTON_PRESS_B4     // B4 | Y      | Triangle
+#define GPIO_PIN_04 GpioAction::BUTTON_PRESS_B2     // B2 | B      | Circle
 
 // --- ADC pins (GPIO 26-29) assigned to MultiChannelADC addon ---
 #define GPIO_PIN_26 GpioAction::ASSIGNED_TO_ADDON   // ADC0 - Steer Left
