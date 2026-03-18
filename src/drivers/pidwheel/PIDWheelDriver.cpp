@@ -1,5 +1,6 @@
 #include "drivers/pidwheel/PIDWheelDriver.h"
 #include "drivers/pidwheel/PIDWheelDescriptors.h"
+#include "drivers/shared/driverhelper.h"
 #include "storagemanager.h"
 #include "drivermanager.h"
 
@@ -7,6 +8,11 @@
 #include "class/hid/hid.h"
 #include "class/hid/hid_device.h"
 #include "device/usbd_pvt.h"
+
+static bool pidwheel_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const * request)
+{
+    return hidd_control_xfer_cb(rhport, stage, request);
+}
 
 #include <cstring>
 #include <algorithm>
@@ -34,7 +40,7 @@ void PIDWheelDriver::initialize() {
         .init = hidd_init,
         .reset = hidd_reset,
         .open = hidd_open,
-        .control_xfer_cb = hid_control_xfer_cb,
+        .control_xfer_cb = pidwheel_control_xfer_cb,
         .xfer_cb = hidd_xfer_cb,
         .sof = NULL
     };

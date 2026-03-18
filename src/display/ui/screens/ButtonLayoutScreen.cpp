@@ -194,8 +194,9 @@ void ButtonLayoutScreen::generateHeader() {
                 statusBar += "P5G";
                 if(((P5GeneralDriver*)DriverManager::getInstance().getDriver())->getAuthSent() == true )
                     statusBar += ":AS";
-                else
-                    statusBar += "   ";
+                break;
+            case INPUT_MODE_HID_WHEEL:
+                statusBar += "WHL";
                 break;
             case INPUT_MODE_XBONE:
                 statusBar += "XBON";
