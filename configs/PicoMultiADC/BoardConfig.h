@@ -86,7 +86,7 @@
 #define MULTI_ADC_AUTO_CALIBRATE_REST 1
 
 // Signal processing
-#define MULTI_ADC_DEADZONE           3     // 3% deadzone to filter noise
+#define MULTI_ADC_DEADZONE           5     // 5% deadzone to filter idle drift
 #define MULTI_ADC_SMOOTHING_FACTOR   100   // EMA factor: 100/1000 = 0.1
 #define MULTI_ADC_OVERSAMPLING       4     // 4x oversampling
 
