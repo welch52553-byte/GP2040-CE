@@ -73,16 +73,19 @@ bool PIDWheelDriver::process(Gamepad * gamepad) {
     int16_t force = calculateForce();
     Gamepad * procGamepad = Storage::getInstance().GetProcessedGamepad();
 
+    // Always enable actuators so DRV8833 addon can drive them
+    procGamepad->auxState.haptics.leftActuator.enabled = true;
+    procGamepad->auxState.haptics.rightActuator.enabled = true;
+
     if (actuatorsEnabled && !devicePaused && force != 0) {
-        uint16_t absForce = static_cast<uint16_t>(std::min(std::abs((int)force) >> 7, 255));
+        // Scale from signed 16-bit (-32767..32767) to unsigned 8-bit (0..255)
+        uint16_t absForce = static_cast<uint16_t>(std::min(std::abs((int)force) * 255 / 32767, 255));
         if (force > 0) {
-            procGamepad->auxState.haptics.leftActuator.enabled = true;
             procGamepad->auxState.haptics.leftActuator.active = true;
             procGamepad->auxState.haptics.leftActuator.intensity = absForce;
             procGamepad->auxState.haptics.rightActuator.active = false;
             procGamepad->auxState.haptics.rightActuator.intensity = 0;
         } else {
-            procGamepad->auxState.haptics.rightActuator.enabled = true;
             procGamepad->auxState.haptics.rightActuator.active = true;
             procGamepad->auxState.haptics.rightActuator.intensity = absForce;
             procGamepad->auxState.haptics.leftActuator.active = false;
