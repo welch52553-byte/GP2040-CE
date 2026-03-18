@@ -158,6 +158,27 @@ uint16_t PIDWheelDriver::get_report(uint8_t report_id, hid_report_type_t report_
 
 void PIDWheelDriver::set_report(uint8_t report_id, hid_report_type_t report_type,
                                  uint8_t const *buffer, uint16_t bufsize) {
+    // TinyUSB OUT endpoint: report_id=0, report_type=0, actual ID is buffer[0]
+    if (report_id == 0 && report_type == 0 && bufsize > 0) {
+        uint8_t actual_id = buffer[0];
+        const uint8_t *data = buffer + 1;
+        uint16_t data_len = bufsize - 1;
+        switch (actual_id) {
+            case HID_ID_EFFREP:    handleSetEffect(data, data_len); break;
+            case HID_ID_ENVREP:    handleSetEnvelope(data, data_len); break;
+            case HID_ID_CONDREP:   handleSetCondition(data, data_len); break;
+            case HID_ID_PRIDREP:   handleSetPeriodic(data, data_len); break;
+            case HID_ID_CONSTREP:  handleSetConstantForce(data, data_len); break;
+            case HID_ID_RAMPREP:   handleSetRamp(data, data_len); break;
+            case HID_ID_EFOPREP:   handleEffectOperation(data, data_len); break;
+            case HID_ID_BLKFRREP:  handleBlockFree(data, data_len); break;
+            case HID_ID_CTRLREP:   handleDeviceControl(data, data_len); break;
+            case HID_ID_GAINREP:   handleDeviceGain(data, data_len); break;
+        }
+        return;
+    }
+
+    // Control pipe SET_REPORT: report_id and report_type are valid
     if (report_type == HID_REPORT_TYPE_OUTPUT) {
         switch (report_id) {
             case HID_ID_EFFREP:    handleSetEffect(buffer, bufsize); break;
