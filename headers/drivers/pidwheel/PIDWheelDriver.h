@@ -25,17 +25,30 @@ public:
     virtual USBListener * get_usb_auth_listener() { return nullptr; }
 
 private:
-    void processSetEffect(const uint8_t *buffer, uint16_t bufsize);
-    void processSetConstantForce(const uint8_t *buffer, uint16_t bufsize);
-    void processEffectOperation(const uint8_t *buffer, uint16_t bufsize);
-    void processBlockFree(const uint8_t *buffer, uint16_t bufsize);
+    void handleSetEffect(const uint8_t *data, uint16_t len);
+    void handleSetEnvelope(const uint8_t *data, uint16_t len);
+    void handleSetCondition(const uint8_t *data, uint16_t len);
+    void handleSetPeriodic(const uint8_t *data, uint16_t len);
+    void handleSetConstantForce(const uint8_t *data, uint16_t len);
+    void handleSetRamp(const uint8_t *data, uint16_t len);
+    void handleEffectOperation(const uint8_t *data, uint16_t len);
+    void handleBlockFree(const uint8_t *data, uint16_t len);
+    void handleDeviceControl(const uint8_t *data, uint16_t len);
+    void handleDeviceGain(const uint8_t *data, uint16_t len);
+
     int16_t calculateForce();
+    int32_t calcConditionForce(PIDEffect &effect, int32_t position);
     uint8_t allocateEffect();
 
     PIDWheelInputReport inputReport;
+    PIDWheelStateReport stateReport;
     uint8_t last_report[PIDWHEEL_ENDPOINT_SIZE];
+
     PIDEffect effects[PID_MAX_EFFECTS];
-    uint8_t next_free_effect;
+    bool actuatorsEnabled;
+    bool devicePaused;
+    uint8_t deviceGain;
+    int16_t lastPosition;
 };
 
 #endif

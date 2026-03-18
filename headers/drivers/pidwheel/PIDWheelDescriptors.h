@@ -10,364 +10,604 @@
 #define PIDWHEEL_JOYSTICK_MID  0x7FFF
 #define PIDWHEEL_ENDPOINT_SIZE 64
 
-// Input Report ID 1: Wheel axes + buttons
-#define PIDWHEEL_REPORT_ID_INPUT 1
-// Output Report ID 2: PID Set Effect
-#define PIDWHEEL_REPORT_ID_PID_SET_EFFECT 2
-// Output Report ID 3: PID Set Constant Force
-#define PIDWHEEL_REPORT_ID_PID_SET_CONSTANT 3
-// Output Report ID 4: PID Effect Operation (Start/Stop)
-#define PIDWHEEL_REPORT_ID_PID_EFFECT_OP 4
-// Output Report ID 5: PID Block Free
-#define PIDWHEEL_REPORT_ID_PID_BLOCK_FREE 5
-// Feature Report ID 6: PID Pool Report
-#define PIDWHEEL_REPORT_ID_PID_POOL 6
-// Feature Report ID 7: Create New Effect
-#define PIDWHEEL_REPORT_ID_PID_CREATE_EFFECT 7
+#define PID_MAX_EFFECTS 16
 
-#define PID_MAX_EFFECTS 8
+// =====================================================
+// Report IDs — matching OpenFFBoard layout
+// =====================================================
+// Input reports
+#define HID_ID_INPUT      0x01
+#define HID_ID_STATE      0x02
 
-typedef struct __attribute__((packed, aligned(1)))
-{
-    uint8_t report_id;
-    uint16_t steering;
-    uint8_t throttle;
-    uint8_t brake;
-    uint32_t buttons;
-    uint8_t hat;
+// Output reports (PID)
+#define HID_ID_EFFREP     0x01  // Set Effect Report
+#define HID_ID_ENVREP     0x02  // Set Envelope Report
+#define HID_ID_CONDREP    0x03  // Set Condition Report
+#define HID_ID_PRIDREP    0x04  // Set Periodic Report
+#define HID_ID_CONSTREP   0x05  // Set Constant Force Report
+#define HID_ID_RAMPREP    0x06  // Set Ramp Force Report
+#define HID_ID_EFOPREP    0x0A  // Effect Operation Report
+#define HID_ID_BLKFRREP   0x0B  // PID Block Free Report
+#define HID_ID_CTRLREP    0x0C  // PID Device Control
+#define HID_ID_GAINREP    0x0D  // Device Gain Report
+
+// Feature reports
+#define HID_ID_NEWEFREP   0x11  // Create New Effect Report
+#define HID_ID_BLKLDREP   0x12  // Block Load Report
+#define HID_ID_POOLREP    0x13  // PID Pool Report
+
+// =====================================================
+// Effect type IDs (matching HID PID spec)
+// =====================================================
+#define FFB_EFFECT_NONE         0x00
+#define FFB_EFFECT_CONSTANT     0x01
+#define FFB_EFFECT_RAMP         0x02
+#define FFB_EFFECT_SQUARE       0x03
+#define FFB_EFFECT_SINE         0x04
+#define FFB_EFFECT_TRIANGLE     0x05
+#define FFB_EFFECT_SAWTOOTHUP   0x06
+#define FFB_EFFECT_SAWTOOTHDOWN 0x07
+#define FFB_EFFECT_SPRING       0x08
+#define FFB_EFFECT_DAMPER       0x09
+#define FFB_EFFECT_INERTIA      0x0A
+#define FFB_EFFECT_FRICTION     0x0B
+
+#define FFB_EFFECT_DURATION_INFINITE 0xFFFF
+
+// PID State flags
+#define HID_ACTUATOR_POWER    0x08
+#define HID_SAFETY_SWITCH     0x04
+#define HID_ENABLE_ACTUATORS  0x02
+#define HID_EFFECT_PAUSE      0x01
+#define HID_EFFECT_PLAYING    0x10
+
+// =====================================================
+// Report Structures
+// =====================================================
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  report_id;
+    uint64_t buttons;
+    int16_t  X;       // Steering
+    int16_t  Y;       // Throttle (mapped)
+    int16_t  Z;       // Brake (mapped)
+    int16_t  RX;
+    int16_t  RY;
+    int16_t  RZ;
+    int16_t  Dial;
+    int16_t  Slider;
 } PIDWheelInputReport;
 
-typedef struct __attribute__((packed, aligned(1)))
-{
+typedef struct __attribute__((packed, aligned(1))) {
     uint8_t report_id;
-    uint8_t effect_block_index;
-    uint8_t effect_type;
+    uint8_t status;
+} PIDWheelStateReport;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectBlockIndex;
+    uint8_t  effectType;
     uint16_t duration;
-    uint16_t trigger_repeat_interval;
+    uint16_t triggerRepeatInterval;
+    uint16_t samplePeriod;
+    uint16_t startDelay;
+    uint8_t  gain;
+    uint8_t  triggerButton;
+    uint8_t  enableAxis;
+    uint16_t directionX;
+} PIDWheelSetEffect;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectBlockIndex;
+    uint16_t attackLevel;
+    uint16_t fadeLevel;
+    uint32_t attackTime;
+    uint32_t fadeTime;
+} PIDWheelSetEnvelope;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectBlockIndex;
+    uint8_t  parameterBlockOffset;
+    int16_t  cpOffset;
+    int16_t  positiveCoefficient;
+    int16_t  negativeCoefficient;
+    uint16_t positiveSaturation;
+    uint16_t negativeSaturation;
+    uint16_t deadBand;
+} PIDWheelSetCondition;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectBlockIndex;
+    uint16_t magnitude;
+    int16_t  offset;
+    uint16_t phase;
+    uint32_t period;
+} PIDWheelSetPeriodic;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectBlockIndex;
+    int16_t  magnitude;
+} PIDWheelSetConstantForce;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t effectBlockIndex;
+    int16_t startLevel;
+    int16_t endLevel;
+} PIDWheelSetRamp;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t effectBlockIndex;
+    uint8_t operation;
+    uint8_t loopCount;
+} PIDWheelEffectOperation;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t effectBlockIndex;
+} PIDWheelBlockFree;
+
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t control;
+} PIDWheelDeviceControl;
+
+typedef struct __attribute__((packed, aligned(1))) {
     uint8_t gain;
-} PIDWheelSetEffectReport;
+} PIDWheelDeviceGain;
 
-typedef struct __attribute__((packed, aligned(1)))
-{
-    uint8_t report_id;
-    uint8_t effect_block_index;
-    int16_t magnitude;
-} PIDWheelSetConstantForceReport;
+// Feature reports (GET)
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectType;
+    uint16_t byteCount;
+} PIDWheelCreateEffect;
 
-typedef struct __attribute__((packed, aligned(1)))
-{
-    uint8_t report_id;
-    uint8_t effect_block_index;
-    uint8_t operation; // 1=Start, 2=StartSolo, 3=Stop
-    uint8_t loop_count;
-} PIDWheelEffectOperationReport;
+typedef struct __attribute__((packed, aligned(1))) {
+    uint8_t  effectBlockIndex;
+    uint8_t  loadStatus;
+    uint16_t ramPoolAvailable;
+} PIDWheelBlockLoad;
 
-typedef struct __attribute__((packed, aligned(1)))
-{
-    uint8_t report_id;
-    uint8_t effect_block_index;
-} PIDWheelBlockFreeReport;
-
-typedef struct __attribute__((packed, aligned(1)))
-{
-    uint8_t report_id;
-    uint8_t ram_pool_size;
-    uint8_t simultaneous_effects_max;
-    uint8_t device_managed_pool;
+typedef struct __attribute__((packed, aligned(1))) {
+    uint16_t ramPoolSize;
+    uint8_t  maxSimultaneousEffects;
+    uint8_t  memoryManagement;
 } PIDWheelPoolReport;
 
-typedef struct __attribute__((packed, aligned(1)))
-{
-    uint8_t report_id;
-    uint8_t effect_type;
-    uint8_t effect_block_index;
-} PIDWheelCreateEffectReport;
-
-// Effect types
-enum PIDEffectType : uint8_t {
-    PID_EFFECT_CONSTANT_FORCE = 1,
-    PID_EFFECT_SPRING = 2,
-    PID_EFFECT_DAMPER = 3,
-    PID_EFFECT_FRICTION = 4,
-    PID_EFFECT_SINE = 5,
-};
-
-// Effect operation
-enum PIDEffectOp : uint8_t {
-    PID_OP_START = 1,
-    PID_OP_START_SOLO = 2,
-    PID_OP_STOP = 3,
-};
-
-// Effect state
+// =====================================================
+// Internal effect storage
+// =====================================================
 typedef struct {
-    bool active;
+    int16_t cpOffset;
+    int16_t positiveCoefficient;
+    int16_t negativeCoefficient;
+    uint16_t positiveSaturation;
+    uint16_t negativeSaturation;
+    uint16_t deadBand;
+} PIDEffectCondition;
+
+typedef struct {
+    volatile uint8_t state;
     uint8_t type;
-    uint16_t duration;
+    int16_t offset;
     uint8_t gain;
     int16_t magnitude;
-    uint32_t start_time;
+    int16_t startLevel;
+    int16_t endLevel;
+
+    PIDEffectCondition condition;
+
+    int16_t phase;
+    uint16_t period;
+    uint32_t duration;
+
+    uint16_t attackLevel;
+    uint16_t fadeLevel;
+    uint32_t attackTime;
+    uint32_t fadeTime;
+
+    uint16_t startDelay;
+    uint32_t startTime;
+    bool useEnvelope;
 } PIDEffect;
 
-// HID Report Descriptor for Wheel with PID
+// =====================================================
+// HID Report Descriptor — Based on OpenFFBoard
+// =====================================================
 static const uint8_t pidwheel_report_descriptor[] = {
     // ========================
-    // Input Report: Wheel axes + buttons
+    // Application Collection: Joystick
     // ========================
     0x05, 0x01,        // USAGE_PAGE (Generic Desktop)
-    0x09, 0x04,        // USAGE (Joystick) — recognized as wheel by sim software
+    0x09, 0x04,        // USAGE (Joystick)
     0xA1, 0x01,        // COLLECTION (Application)
-
-    // Report ID 1: Input
-    0x85, PIDWHEEL_REPORT_ID_INPUT,
-
-    // Steering axis (16-bit, 0-65535)
-    0x05, 0x02,        //   USAGE_PAGE (Simulation Controls)
-    0x09, 0xC8,        //   USAGE (Steering)
-    0x15, 0x00,        //   LOGICAL_MINIMUM (0)
-    0x27, 0xFF, 0xFF, 0x00, 0x00, // LOGICAL_MAXIMUM (65535)
-    0x75, 0x10,        //   REPORT_SIZE (16)
-    0x95, 0x01,        //   REPORT_COUNT (1)
-    0x81, 0x02,        //   INPUT (Data,Var,Abs)
-
-    // Throttle (8-bit, 0-255)
-    0x09, 0xC4,        //   USAGE (Accelerator)
-    0x15, 0x00,        //   LOGICAL_MINIMUM (0)
-    0x26, 0xFF, 0x00,  //   LOGICAL_MAXIMUM (255)
-    0x75, 0x08,        //   REPORT_SIZE (8)
-    0x95, 0x01,        //   REPORT_COUNT (1)
-    0x81, 0x02,        //   INPUT (Data,Var,Abs)
-
-    // Brake (8-bit, 0-255)
-    0x09, 0xC5,        //   USAGE (Brake)
-    0x15, 0x00,        //   LOGICAL_MINIMUM (0)
-    0x26, 0xFF, 0x00,  //   LOGICAL_MAXIMUM (255)
-    0x75, 0x08,        //   REPORT_SIZE (8)
-    0x95, 0x01,        //   REPORT_COUNT (1)
-    0x81, 0x02,        //   INPUT (Data,Var,Abs)
+    0xA1, 0x00,        //   COLLECTION (Physical)
+    0x85, HID_ID_INPUT,//     REPORT_ID (1)
 
     // 32 Buttons
-    0x05, 0x09,        //   USAGE_PAGE (Button)
-    0x19, 0x01,        //   USAGE_MINIMUM (Button 1)
-    0x29, 0x20,        //   USAGE_MAXIMUM (Button 32)
-    0x15, 0x00,        //   LOGICAL_MINIMUM (0)
-    0x25, 0x01,        //   LOGICAL_MAXIMUM (1)
-    0x75, 0x01,        //   REPORT_SIZE (1)
-    0x95, 0x20,        //   REPORT_COUNT (32)
-    0x81, 0x02,        //   INPUT (Data,Var,Abs)
-
-    // Hat Switch (4-bit)
-    0x05, 0x01,        //   USAGE_PAGE (Generic Desktop)
-    0x09, 0x39,        //   USAGE (Hat switch)
-    0x15, 0x00,        //   LOGICAL_MINIMUM (0)
-    0x25, 0x07,        //   LOGICAL_MAXIMUM (7)
-    0x75, 0x04,        //   REPORT_SIZE (4)
-    0x95, 0x01,        //   REPORT_COUNT (1)
-    0x81, 0x42,        //   INPUT (Data,Var,Abs,Null)
-    // Padding 4 bits
-    0x75, 0x04,        //   REPORT_SIZE (4)
-    0x95, 0x01,        //   REPORT_COUNT (1)
-    0x81, 0x01,        //   INPUT (Cnst,Ary,Abs)
-
-    // ========================
-    // PID Force Feedback
-    // ========================
-    0x05, 0x0F,        //   USAGE_PAGE (Physical Interface Device)
-    0x09, 0x21,        //   USAGE (Set Effect Report)
-    0xA1, 0x02,        //   COLLECTION (Logical)
-
-    // Report ID 2: Set Effect
-    0x85, PIDWHEEL_REPORT_ID_PID_SET_EFFECT,
-
-    0x09, 0x22,        //     USAGE (Effect Block Index)
-    0x15, 0x01,        //     LOGICAL_MINIMUM (1)
-    0x25, PID_MAX_EFFECTS, // LOGICAL_MAXIMUM
-    0x75, 0x08,        //     REPORT_SIZE (8)
-    0x95, 0x01,        //     REPORT_COUNT (1)
-    0x91, 0x02,        //     OUTPUT (Data,Var,Abs)
-
-    0x09, 0x25,        //     USAGE (Effect Type)
-    0xA1, 0x02,        //     COLLECTION (Logical)
-    0x09, 0x26,        //       USAGE (ET Constant Force)
-    0x09, 0x27,        //       USAGE (ET Ramp)
-    0x09, 0x30,        //       USAGE (ET Square)
-    0x09, 0x31,        //       USAGE (ET Sine)
-    0x09, 0x32,        //       USAGE (ET Triangle)
-    0x09, 0x33,        //       USAGE (ET Sawtooth Up)
-    0x09, 0x34,        //       USAGE (ET Sawtooth Down)
-    0x09, 0x40,        //       USAGE (ET Spring)
-    0x09, 0x41,        //       USAGE (ET Damper)
-    0x09, 0x42,        //       USAGE (ET Inertia)
-    0x09, 0x43,        //       USAGE (ET Friction)
-    0x15, 0x01,        //       LOGICAL_MINIMUM (1)
-    0x25, 0x0B,        //       LOGICAL_MAXIMUM (11)
-    0x75, 0x08,        //       REPORT_SIZE (8)
-    0x95, 0x01,        //       REPORT_COUNT (1)
-    0x91, 0x00,        //       OUTPUT (Data,Ary,Abs)
-    0xC0,              //     END_COLLECTION
-
-    0x09, 0x50,        //     USAGE (Duration)
+    0x05, 0x09,        //     USAGE_PAGE (Button)
+    0x19, 0x01,        //     USAGE_MINIMUM (Button 1)
+    0x29, 0x20,        //     USAGE_MAXIMUM (Button 32)
     0x15, 0x00,        //     LOGICAL_MINIMUM (0)
-    0x27, 0xFF, 0xFF, 0x00, 0x00, // LOGICAL_MAXIMUM (65535)
-    0x75, 0x10,        //     REPORT_SIZE (16)
-    0x95, 0x01,        //     REPORT_COUNT (1)
-    0x91, 0x02,        //     OUTPUT (Data,Var,Abs)
+    0x25, 0x01,        //     LOGICAL_MAXIMUM (1)
+    0x95, 0x20,        //     REPORT_COUNT (32)
+    0x75, 0x01,        //     REPORT_SIZE (1)
+    0x81, 0x02,        //     INPUT (Data,Var,Abs)
 
-    0x09, 0x54,        //     USAGE (Trigger Repeat Interval)
-    0x15, 0x00,        //     LOGICAL_MINIMUM (0)
-    0x27, 0xFF, 0xFF, 0x00, 0x00, // LOGICAL_MAXIMUM (65535)
-    0x75, 0x10,        //     REPORT_SIZE (16)
-    0x95, 0x01,        //     REPORT_COUNT (1)
-    0x91, 0x02,        //     OUTPUT (Data,Var,Abs)
+    // padding to fill 64-bit buttons field (32 more bits)
+    0x95, 0x20,        //     REPORT_COUNT (32)
+    0x81, 0x01,        //     INPUT (Const,Ary,Abs) padding
 
-    0x09, 0x52,        //     USAGE (Gain)
-    0x15, 0x00,        //     LOGICAL_MINIMUM (0)
-    0x26, 0xFF, 0x00,  //     LOGICAL_MAXIMUM (255)
-    0x75, 0x08,        //     REPORT_SIZE (8)
-    0x95, 0x01,        //     REPORT_COUNT (1)
-    0x91, 0x02,        //     OUTPUT (Data,Var,Abs)
-
-    0xC0,              //   END_COLLECTION (Set Effect)
-
-    // Report ID 3: Set Constant Force
-    0x09, 0x73,        //   USAGE (Set Constant Force Report)
-    0xA1, 0x02,        //   COLLECTION (Logical)
-    0x85, PIDWHEEL_REPORT_ID_PID_SET_CONSTANT,
-
-    0x09, 0x22,        //     USAGE (Effect Block Index)
-    0x15, 0x01,        //     LOGICAL_MINIMUM (1)
-    0x25, PID_MAX_EFFECTS,
-    0x75, 0x08,        //     REPORT_SIZE (8)
-    0x95, 0x01,        //     REPORT_COUNT (1)
-    0x91, 0x02,        //     OUTPUT (Data,Var,Abs)
-
-    0x09, 0x70,        //     USAGE (Magnitude)
+    // 8 Analog axes (signed 16-bit, -32767..32767)
+    0x05, 0x01,        //     USAGE_PAGE (Generic Desktop)
+    0x09, 0x30,        //     USAGE (X) — Steering
+    0x09, 0x31,        //     USAGE (Y)
+    0x09, 0x32,        //     USAGE (Z)
+    0x09, 0x33,        //     USAGE (Rx)
+    0x09, 0x34,        //     USAGE (Ry)
+    0x09, 0x35,        //     USAGE (Rz)
+    0x09, 0x37,        //     USAGE (Dial)
+    0x09, 0x36,        //     USAGE (Slider)
     0x16, 0x01, 0x80,  //     LOGICAL_MINIMUM (-32767)
     0x26, 0xFF, 0x7F,  //     LOGICAL_MAXIMUM (32767)
     0x75, 0x10,        //     REPORT_SIZE (16)
-    0x95, 0x01,        //     REPORT_COUNT (1)
-    0x91, 0x02,        //     OUTPUT (Data,Var,Abs)
+    0x95, 0x08,        //     REPORT_COUNT (8)
+    0x81, 0x02,        //     INPUT (Data,Var,Abs)
 
-    0xC0,              //   END_COLLECTION (Constant Force)
+    0xC0,              //   END_COLLECTION (Physical)
 
-    // Report ID 4: Effect Operation
-    0x09, 0x77,        //   USAGE (Effect Operation Report)
+    // ========================
+    // PID State Report (Input)
+    // ========================
+    0x05, 0x0F,        //   USAGE_PAGE (Physical Interface Device)
+    0x09, 0x92,        //   USAGE (PID State Report)
     0xA1, 0x02,        //   COLLECTION (Logical)
-    0x85, PIDWHEEL_REPORT_ID_PID_EFFECT_OP,
+    0x85, HID_ID_STATE,//     REPORT_ID (2)
+
+    0x09, 0x9F,        //     USAGE (Device is Pause)
+    0x09, 0xA0,        //     USAGE (Actuators Enabled)
+    0x09, 0xA4,        //     USAGE (Safety Switch)
+    0x09, 0xA6,        //     USAGE (Actuator Power)
+    0x09, 0x94,        //     USAGE (Effect Playing)
+    0x15, 0x00,        //     LOGICAL_MINIMUM (0)
+    0x25, 0x01,        //     LOGICAL_MAXIMUM (1)
+    0x35, 0x00,        //     PHYSICAL_MINIMUM (0)
+    0x45, 0x01,        //     PHYSICAL_MAXIMUM (1)
+    0x75, 0x01,        //     REPORT_SIZE (1)
+    0x95, 0x05,        //     REPORT_COUNT (5)
+    0x81, 0x02,        //     INPUT (Data,Var,Abs)
+    0x95, 0x03,        //     REPORT_COUNT (3) padding
+    0x81, 0x03,        //     INPUT (Const,Var,Abs)
+
+    0xC0,              //   END_COLLECTION (PID State)
+
+    // ========================
+    // Output: Set Effect Report
+    // ========================
+    0x09, 0x21,        //   USAGE (Set Effect Report)
+    0xA1, 0x02,        //   COLLECTION (Logical)
+    0x85, HID_ID_EFFREP,
 
     0x09, 0x22,        //     USAGE (Effect Block Index)
-    0x15, 0x01,
-    0x25, PID_MAX_EFFECTS,
-    0x75, 0x08,
-    0x95, 0x01,
-    0x91, 0x02,
-
-    0x09, 0x78,        //     USAGE (Operation)
-    0xA1, 0x02,        //     COLLECTION (Logical)
-    0x09, 0x79,        //       USAGE (Op Effect Start)
-    0x09, 0x7A,        //       USAGE (Op Effect Start Solo)
-    0x09, 0x7B,        //       USAGE (Op Effect Stop)
-    0x15, 0x01,
-    0x25, 0x03,
-    0x75, 0x08,
-    0x95, 0x01,
-    0x91, 0x00,        //       OUTPUT (Data,Ary,Abs)
-    0xC0,              //     END_COLLECTION
-
-    0x09, 0x7C,        //     USAGE (Loop Count)
-    0x15, 0x00,
-    0x26, 0xFF, 0x00,
-    0x75, 0x08,
-    0x95, 0x01,
-    0x91, 0x02,
-
-    0xC0,              //   END_COLLECTION (Effect Operation)
-
-    // Report ID 5: PID Block Free
-    0x09, 0x90,        //   USAGE (PID Block Free Report)
-    0xA1, 0x02,
-    0x85, PIDWHEEL_REPORT_ID_PID_BLOCK_FREE,
-
-    0x09, 0x22,        //     USAGE (Effect Block Index)
-    0x15, 0x01,
-    0x25, PID_MAX_EFFECTS,
-    0x75, 0x08,
-    0x95, 0x01,
-    0x91, 0x02,
-
-    0xC0,              //   END_COLLECTION (Block Free)
-
-    // Report ID 6: PID Pool Report (Feature)
-    0x09, 0x7F,        //   USAGE (PID Pool Report)
-    0xA1, 0x02,
-    0x85, PIDWHEEL_REPORT_ID_PID_POOL,
-
-    0x09, 0x80,        //     USAGE (RAM Pool Size)
-    0x15, 0x00,
-    0x26, 0xFF, 0x00,
-    0x75, 0x08,
-    0x95, 0x01,
-    0xB1, 0x02,        //     FEATURE (Data,Var,Abs)
-
-    0x09, 0x83,        //     USAGE (Simultaneous Effects Max)
-    0x15, 0x00,
-    0x25, PID_MAX_EFFECTS,
-    0x75, 0x08,
-    0x95, 0x01,
-    0xB1, 0x02,
-
-    0x09, 0x84,        //     USAGE (Device Managed Pool)
-    0x15, 0x00,
-    0x25, 0x01,
-    0x75, 0x08,
-    0x95, 0x01,
-    0xB1, 0x02,
-
-    0xC0,              //   END_COLLECTION (Pool Report)
-
-    // Report ID 7: Create New Effect (Feature)
-    0x09, 0xAB,        //   USAGE (Create New Effect Report)
-    0xA1, 0x02,
-    0x85, PIDWHEEL_REPORT_ID_PID_CREATE_EFFECT,
+    0x15, 0x01, 0x25, PID_MAX_EFFECTS,
+    0x35, 0x01, 0x45, PID_MAX_EFFECTS,
+    0x75, 0x08, 0x95, 0x01, 0x91, 0x02,
 
     0x09, 0x25,        //     USAGE (Effect Type)
-    0x15, 0x01,
-    0x25, 0x0B,
-    0x75, 0x08,
-    0x95, 0x01,
-    0xB1, 0x02,        //     FEATURE (Data,Var,Abs)
+    0xA1, 0x02,
+    0x09, 0x26,  0x09, 0x27,  0x09, 0x30,  0x09, 0x31,
+    0x09, 0x32,  0x09, 0x33,  0x09, 0x34,
+    0x09, 0x40,  0x09, 0x41,  0x09, 0x42,  0x09, 0x43,
+    0x25, 0x0B,  0x15, 0x01,  0x35, 0x01,  0x45, 0x0B,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x00,
+    0xC0,
 
-    0x09, 0x22,        //     USAGE (Effect Block Index)
-    0x15, 0x01,
-    0x25, PID_MAX_EFFECTS,
-    0x75, 0x08,
-    0x95, 0x01,
+    // Duration, TriggerRepeatInterval, SamplePeriod, StartDelay
+    0x09, 0x50,  0x09, 0x54,  0x09, 0x51,  0x09, 0xA7,
+    0x15, 0x00,  0x26, 0xFF, 0x7F,
+    0x35, 0x00,  0x46, 0xFF, 0x7F,
+    0x66, 0x03, 0x10,  0x55, 0xFD,
+    0x75, 0x10,  0x95, 0x04,  0x91, 0x02,
+    0x55, 0x00,  0x66, 0x00, 0x00,
+
+    // Gain
+    0x09, 0x52,
+    0x15, 0x00,  0x26, 0xFF, 0x00,
+    0x35, 0x00,  0x46, 0x10, 0x27,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+
+    // Trigger Button
+    0x09, 0x53,
+    0x15, 0x01,  0x25, 0x08,  0x35, 0x01,  0x45, 0x08,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+
+    // Axes Enable
+    0x09, 0x55,
+    0xA1, 0x02,
+    0x05, 0x01,  0x09, 0x30,
+    0x15, 0x00,  0x25, 0x00,
+    0x75, 0x01,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+
+    0x05, 0x0F,
+    0x09, 0x56,  // Direction Enable
+    0x95, 0x01,  0x91, 0x02,
+    0x95, 0x06,  0x91, 0x03,  // padding
+
+    // Direction
+    0x09, 0x57,
+    0xA1, 0x02,
+    0x0B, 0x01, 0x00, 0x0A, 0x00,
+    0x66, 0x14, 0x00,
+    0x15, 0x00,  0x27, 0xA0, 0x8C, 0x00, 0x00,
+    0x35, 0x00,  0x47, 0xA0, 0x8C, 0x00, 0x00,
+    0x66, 0x00, 0x00,
+    0x75, 0x10,  0x95, 0x01,  0x91, 0x02,
+    0x55, 0x00,  0x66, 0x00, 0x00,
+    0xC0,
+
+    // Type Specific Block Offset
+    0x05, 0x0F,
+    0x09, 0x58,
+    0xA1, 0x02,
+    0x0B, 0x01, 0x00, 0x0A, 0x00,
+    0x26, 0xFD, 0x7F,
+    0x75, 0x10,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+    0xC0,              // END Set Effect
+
+    // ========================
+    // Output: Set Envelope Report
+    // ========================
+    0x09, 0x5A,
+    0xA1, 0x02,
+    0x85, HID_ID_ENVREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x5B,  0x09, 0x5D,  // Attack Level, Fade Level
+    0x16, 0x00, 0x00,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x00,  0x46, 0xFF, 0x7F,
+    0x75, 0x10,  0x95, 0x02,  0x91, 0x02,
+    0x09, 0x5C,  0x09, 0x5E,  // Attack Time, Fade Time
+    0x66, 0x03, 0x10,  0x55, 0xFD,
+    0x27, 0xFF, 0x7F, 0x00, 0x00,
+    0x47, 0xFF, 0x7F, 0x00, 0x00,
+    0x75, 0x20,  0x91, 0x02,
+    0x45, 0x00,  0x66, 0x00, 0x00,  0x55, 0x00,
+    0xC0,
+
+    // ========================
+    // Output: Set Condition Report
+    // ========================
+    0x09, 0x5F,
+    0xA1, 0x02,
+    0x85, HID_ID_CONDREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x23,  // Parameter Block Offset
+    0x15, 0x00,  0x25, 0x03,  0x35, 0x00,  0x45, 0x03,
+    0x75, 0x06,  0x95, 0x01,  0x91, 0x02,
+    // Type Specific Block Offset
+    0x09, 0x58,
+    0xA1, 0x02,
+    0x0B, 0x01, 0x00, 0x0A, 0x00,
+    0x75, 0x02,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+    // Condition parameters (signed 16-bit)
+    0x16, 0x00, 0x80,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x80,  0x46, 0xFF, 0x7F,
+    0x09, 0x60,  // CP Offset
+    0x75, 0x10,  0x95, 0x01,  0x91, 0x02,
+    0x36, 0x00, 0x80,  0x46, 0xFF, 0x7F,
+    0x09, 0x61,  0x09, 0x62,  // Pos/Neg Coefficient
+    0x95, 0x02,  0x91, 0x02,
+    0x16, 0x00, 0x00,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x00,  0x46, 0xFF, 0x7F,
+    0x09, 0x63,  0x09, 0x64,  // Pos/Neg Saturation
+    0x75, 0x10,  0x95, 0x02,  0x91, 0x02,
+    0x09, 0x65,  // Dead Band
+    0x46, 0xFF, 0x7F,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+
+    // ========================
+    // Output: Set Periodic Report
+    // ========================
+    0x09, 0x6E,
+    0xA1, 0x02,
+    0x85, HID_ID_PRIDREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x70,  // Magnitude
+    0x16, 0x00, 0x00,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x00,  0x46, 0xFF, 0x7F,
+    0x75, 0x10,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x6F,  // Offset
+    0x16, 0x00, 0x80,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x80,  0x46, 0xFF, 0x7F,
+    0x95, 0x01,  0x75, 0x10,  0x91, 0x02,
+    0x09, 0x71,  // Phase
+    0x66, 0x14, 0x00,  0x55, 0xFE,
+    0x15, 0x00,  0x27, 0x9F, 0x8C, 0x00, 0x00,
+    0x35, 0x00,  0x47, 0x9F, 0x8C, 0x00, 0x00,
+    0x75, 0x10,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x72,  // Period
+    0x15, 0x01,  0x27, 0xFF, 0x7F, 0x00, 0x00,
+    0x35, 0x01,  0x47, 0xFF, 0x7F, 0x00, 0x00,
+    0x66, 0x03, 0x10,  0x55, 0xFD,
+    0x75, 0x20,  0x95, 0x01,  0x91, 0x02,
+    0x66, 0x00, 0x00,  0x55, 0x00,
+    0xC0,
+
+    // ========================
+    // Output: Set Constant Force Report
+    // ========================
+    0x09, 0x73,
+    0xA1, 0x02,
+    0x85, HID_ID_CONSTREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x70,  // Magnitude
+    0x16, 0x00, 0x80,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x80,  0x46, 0xFF, 0x7F,
+    0x75, 0x10,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+
+    // ========================
+    // Output: Set Ramp Force Report
+    // ========================
+    0x09, 0x74,
+    0xA1, 0x02,
+    0x85, HID_ID_RAMPREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x75,  0x09, 0x76,  // Ramp Start, Ramp End
+    0x16, 0x00, 0x80,  0x26, 0xFF, 0x7F,
+    0x36, 0x00, 0x80,  0x46, 0xFF, 0x7F,
+    0x75, 0x10,  0x95, 0x02,  0x91, 0x02,
+    0xC0,
+
+    // ========================
+    // Output: Effect Operation Report
+    // ========================
+    0x05, 0x0F,
+    0x09, 0x77,
+    0xA1, 0x02,
+    0x85, HID_ID_EFOPREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0x09, 0x78,  // Effect Operation
+    0xA1, 0x02,
+    0x09, 0x79,  0x09, 0x7A,  0x09, 0x7B,
+    0x15, 0x01,  0x25, 0x03,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x00,
+    0xC0,
+    0x09, 0x7C,  // Loop Count
+    0x15, 0x00,  0x26, 0xFF, 0x00,
+    0x35, 0x00,  0x46, 0xFF, 0x00,
+    0x91, 0x02,
+    0xC0,
+
+    // ========================
+    // Output: PID Block Free Report
+    // ========================
+    0x09, 0x90,
+    0xA1, 0x02,
+    0x85, HID_ID_BLKFRREP,
+    0x09, 0x22,  0x15, 0x01,  0x25, PID_MAX_EFFECTS,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+
+    // ========================
+    // Output: PID Device Control
+    // ========================
+    0x09, 0x95,
+    0xA1, 0x02,
+    0x85, HID_ID_CTRLREP,
+    0x09, 0x96,
+    0xA1, 0x02,
+    0x09, 0x97,  0x09, 0x98,  0x09, 0x99,
+    0x09, 0x9A,  0x09, 0x9B,  0x09, 0x9C,
+    0x15, 0x01,  0x25, 0x06,
+    0x75, 0x01,  0x95, 0x08,  0x91, 0x02,
+    0xC0,
+    0xC0,
+
+    // ========================
+    // Output: Device Gain Report
+    // ========================
+    0x09, 0x7D,
+    0xA1, 0x02,
+    0x85, HID_ID_GAINREP,
+    0x09, 0x7E,
+    0x15, 0x00,  0x26, 0xFF, 0x00,
+    0x35, 0x00,  0x46, 0x10, 0x27,
+    0x75, 0x08,  0x95, 0x01,  0x91, 0x02,
+    0xC0,
+
+    // ========================
+    // Feature: Create New Effect Report
+    // ========================
+    0x09, 0xAB,
+    0xA1, 0x02,
+    0x85, HID_ID_NEWEFREP,
+    0x09, 0x25,  // Effect Type
+    0xA1, 0x02,
+    0x09, 0x26,  0x09, 0x27,  0x09, 0x30,  0x09, 0x31,
+    0x09, 0x32,  0x09, 0x33,  0x09, 0x34,
+    0x09, 0x40,  0x09, 0x41,  0x09, 0x42,  0x09, 0x43,
+    0x25, 0x0B,  0x15, 0x01,  0x35, 0x01,  0x45, 0x0B,
+    0x75, 0x08,  0x95, 0x01,  0xB1, 0x00,
+    0xC0,
+    0x05, 0x01,
+    0x09, 0x3B,  // Byte Count
+    0x15, 0x00,  0x26, 0xFF, 0x01,
+    0x35, 0x00,  0x46, 0xFF, 0x01,
+    0x75, 0x0A,  0x95, 0x01,  0xB1, 0x02,
+    0x75, 0x06,  0xB1, 0x01,  // padding
+    0xC0,
+
+    // ========================
+    // Feature: Block Load Report
+    // ========================
+    0x05, 0x0F,
+    0x09, 0x89,
+    0xA1, 0x02,
+    0x85, HID_ID_BLKLDREP,
+    0x09, 0x22,  // Effect Block Index
+    0x25, PID_MAX_EFFECTS,  0x15, 0x01,
+    0x35, 0x01,  0x45, PID_MAX_EFFECTS,
+    0x75, 0x08,  0x95, 0x01,  0xB1, 0x02,
+    0x09, 0x8B,  // Block Load Status
+    0xA1, 0x02,
+    0x09, 0x8C,  0x09, 0x8D,  0x09, 0x8E,
+    0x15, 0x01,  0x25, 0x03,  0x35, 0x01,  0x45, 0x03,
+    0x75, 0x08,  0x95, 0x01,  0xB1, 0x00,
+    0xC0,
+    0x09, 0xAC,  // RAM Pool Available
+    0x15, 0x00,  0x27, 0xFF, 0xFF, 0x00, 0x00,
+    0x35, 0x00,  0x47, 0xFF, 0xFF, 0x00, 0x00,
+    0x75, 0x10,  0x95, 0x01,  0xB1, 0x00,
+    0xC0,
+
+    // ========================
+    // Feature: PID Pool Report
+    // ========================
+    0x09, 0x7F,
+    0xA1, 0x02,
+    0x85, HID_ID_POOLREP,
+    0x09, 0x80,  // RAM Pool Size
+    0x75, 0x10,  0x95, 0x01,
+    0x15, 0x00,  0x35, 0x00,
+    0x27, 0xFF, 0xFF, 0x00, 0x00,
+    0x47, 0xFF, 0xFF, 0x00, 0x00,
     0xB1, 0x02,
+    0x09, 0x83,  // Simultaneous Effects Max
+    0x26, 0xFF, 0x00,  0x46, 0xFF, 0x00,
+    0x75, 0x08,  0x95, 0x01,  0xB1, 0x02,
+    0x09, 0xA9,  // Device Managed Pool
+    0x09, 0xAA,  // Shared Parameter Blocks
+    0x75, 0x01,  0x95, 0x02,
+    0x15, 0x00,  0x25, 0x01,  0x35, 0x00,  0x45, 0x01,
+    0xB1, 0x02,
+    0x75, 0x06,  0x95, 0x01,  0xB1, 0x03,  // padding
+    0xC0,
 
-    0xC0,              //   END_COLLECTION (Create Effect)
-
-    0xC0               // END_COLLECTION (Application)
+    0xC0  // END_COLLECTION (Application)
 };
 
-// Device Descriptor
+// =====================================================
+// USB Descriptors
+// =====================================================
 static const uint8_t pidwheel_device_descriptor[] = {
-    18,                     // bLength
-    1,                      // bDescriptorType (Device)
-    0x00, 0x02,             // bcdUSB 2.00
-    0x00,                   // bDeviceClass (Use class from Interface)
-    0x00,                   // bDeviceSubClass
-    0x00,                   // bDeviceProtocol
-    64,                     // bMaxPacketSize0
+    18, 1, 0x00, 0x02, 0x00, 0x00, 0x00, 64,
     PIDWHEEL_VENDOR_ID & 0xFF, (PIDWHEEL_VENDOR_ID >> 8) & 0xFF,
     PIDWHEEL_PRODUCT_ID & 0xFF, (PIDWHEEL_PRODUCT_ID >> 8) & 0xFF,
-    0x00, 0x01,             // bcdDevice 1.00
-    0x01,                   // iManufacturer
-    0x02,                   // iProduct
-    0x00,                   // iSerialNumber
-    0x01,                   // bNumConfigurations
+    0x00, 0x01, 0x01, 0x02, 0x00, 0x01,
 };
 
-// Configuration Descriptor
 #define PIDWHEEL_CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
 
 static const uint8_t pidwheel_configuration_descriptor[] = {
@@ -379,18 +619,9 @@ static const uint8_t pidwheel_configuration_descriptor[] = {
 };
 
 static const uint8_t pidwheel_device_qualifier[] = {
-    10,                     // bLength
-    6,                      // bDescriptorType (Device Qualifier)
-    0x00, 0x02,             // bcdUSB 2.00
-    0x00,                   // bDeviceClass
-    0x00,                   // bDeviceSubClass
-    0x00,                   // bDeviceProtocol
-    64,                     // bMaxPacketSize0
-    0x01,                   // bNumConfigurations
-    0x00,                   // Reserved
+    10, 6, 0x00, 0x02, 0x00, 0x00, 0x00, 64, 0x01, 0x00,
 };
 
-// String descriptors
 static const char * pidwheel_string_manufacturer = "GP2040-CE";
 static const char * pidwheel_string_product = "GP2040-CE Racing Wheel";
 
