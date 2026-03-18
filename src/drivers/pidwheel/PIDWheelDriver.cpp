@@ -21,7 +21,7 @@ static bool pidwheel_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control
 
 void PIDWheelDriver::initialize() {
     memset(&inputReport, 0, sizeof(inputReport));
-    inputReport.report_id = HID_ID_INPUT;
+    inputReport.report_id = 0x01;
 
     stateReport.report_id = HID_ID_STATE;
     stateReport.status = HID_ACTUATOR_POWER | HID_ENABLE_ACTUATORS;
@@ -32,6 +32,7 @@ void PIDWheelDriver::initialize() {
     devicePaused = false;
     deviceGain = 255;
     lastPosition = 0;
+    lastCreatedEffectIdx = 0;
 
     class_driver = {
     #if CFG_TUSB_DEBUG >= 2
@@ -100,7 +101,7 @@ bool PIDWheelDriver::process(Gamepad * gamepad) {
 
     // Update state report
     bool anyPlaying = false;
-    for (int i = 0; i < PID_MAX_EFFECTS; i++) {
+    for (int i = 0; i < MAX_EFFECTS; i++) {
         if (effects[i].state & 0x01) { anyPlaying = true; break; }
     }
     stateReport.status = HID_ACTUATOR_POWER
@@ -114,7 +115,7 @@ bool PIDWheelDriver::process(Gamepad * gamepad) {
     void * report = &inputReport;
     uint16_t report_size = sizeof(inputReport);
     if (memcmp(last_report, report, report_size) != 0) {
-        if (tud_hid_ready() && tud_hid_report(HID_ID_INPUT, ((uint8_t*)report) + 1, report_size - 1)) {
+        if (tud_hid_ready() && tud_hid_report(0x01, ((uint8_t*)report) + 1, report_size - 1)) {
             memcpy(last_report, report, report_size);
             return true;
         }
@@ -134,28 +135,21 @@ uint16_t PIDWheelDriver::get_report(uint8_t report_id, hid_report_type_t report_
     if (report_type == HID_REPORT_TYPE_FEATURE) {
         if (report_id == HID_ID_POOLREP) {
             PIDWheelPoolReport pool = {};
-            pool.ramPoolSize = PID_MAX_EFFECTS;
-            pool.maxSimultaneousEffects = PID_MAX_EFFECTS;
-            pool.memoryManagement = 0x03; // DeviceManaged + SharedParameterBlocks
+            pool.ramPoolSize = MAX_EFFECTS;
+            pool.maxSimultaneousEffects = MAX_EFFECTS;
+            pool.memoryManagement = 0x03;
             uint16_t len = std::min((uint16_t)sizeof(pool), reqlen);
             memcpy(buffer, &pool, len);
             return len;
         }
         if (report_id == HID_ID_BLKLDREP) {
+            // Return the last allocated effect index with success status
             PIDWheelBlockLoad bl = {};
-            bl.effectBlockIndex = allocateEffect();
-            bl.loadStatus = (bl.effectBlockIndex > 0) ? 1 : 2; // 1=Success, 2=Full
-            bl.ramPoolAvailable = PID_MAX_EFFECTS;
+            bl.effectBlockIndex = lastCreatedEffectIdx;
+            bl.loadStatus = (lastCreatedEffectIdx > 0) ? 1 : 2;
+            bl.ramPoolAvailable = MAX_EFFECTS;
             uint16_t len = std::min((uint16_t)sizeof(bl), reqlen);
             memcpy(buffer, &bl, len);
-            return len;
-        }
-        if (report_id == HID_ID_NEWEFREP) {
-            PIDWheelCreateEffect ce = {};
-            ce.effectType = 0;
-            ce.byteCount = 0;
-            uint16_t len = std::min((uint16_t)sizeof(ce), reqlen);
-            memcpy(buffer, &ce, len);
             return len;
         }
     }
@@ -182,7 +176,8 @@ void PIDWheelDriver::set_report(uint8_t report_id, hid_report_type_t report_type
         if (report_id == HID_ID_NEWEFREP && bufsize >= 1) {
             uint8_t effectType = buffer[0];
             uint8_t idx = allocateEffect();
-            if (idx > 0 && idx <= PID_MAX_EFFECTS) {
+            lastCreatedEffectIdx = idx;
+            if (idx > 0 && idx <= MAX_EFFECTS) {
                 memset(&effects[idx - 1], 0, sizeof(PIDEffect));
                 effects[idx - 1].type = effectType;
                 effects[idx - 1].gain = 255;
@@ -196,7 +191,7 @@ void PIDWheelDriver::handleSetEffect(const uint8_t *data, uint16_t len) {
     if (len < sizeof(PIDWheelSetEffect)) return;
     auto *d = (const PIDWheelSetEffect*)data;
     uint8_t idx = d->effectBlockIndex;
-    if (idx < 1 || idx > PID_MAX_EFFECTS) return;
+    if (idx < 1 || idx > MAX_EFFECTS) return;
     PIDEffect &e = effects[idx - 1];
     e.type = d->effectType;
     e.duration = d->duration;
@@ -208,7 +203,7 @@ void PIDWheelDriver::handleSetEnvelope(const uint8_t *data, uint16_t len) {
     if (len < sizeof(PIDWheelSetEnvelope)) return;
     auto *d = (const PIDWheelSetEnvelope*)data;
     uint8_t idx = d->effectBlockIndex;
-    if (idx < 1 || idx > PID_MAX_EFFECTS) return;
+    if (idx < 1 || idx > MAX_EFFECTS) return;
     PIDEffect &e = effects[idx - 1];
     e.attackLevel = d->attackLevel;
     e.fadeLevel = d->fadeLevel;
@@ -221,7 +216,7 @@ void PIDWheelDriver::handleSetCondition(const uint8_t *data, uint16_t len) {
     if (len < sizeof(PIDWheelSetCondition)) return;
     auto *d = (const PIDWheelSetCondition*)data;
     uint8_t idx = d->effectBlockIndex;
-    if (idx < 1 || idx > PID_MAX_EFFECTS) return;
+    if (idx < 1 || idx > MAX_EFFECTS) return;
     PIDEffect &e = effects[idx - 1];
     e.condition.cpOffset = d->cpOffset;
     e.condition.positiveCoefficient = d->positiveCoefficient;
@@ -235,7 +230,7 @@ void PIDWheelDriver::handleSetPeriodic(const uint8_t *data, uint16_t len) {
     if (len < sizeof(PIDWheelSetPeriodic)) return;
     auto *d = (const PIDWheelSetPeriodic*)data;
     uint8_t idx = d->effectBlockIndex;
-    if (idx < 1 || idx > PID_MAX_EFFECTS) return;
+    if (idx < 1 || idx > MAX_EFFECTS) return;
     PIDEffect &e = effects[idx - 1];
     e.magnitude = d->magnitude;
     e.offset = d->offset;
@@ -247,7 +242,7 @@ void PIDWheelDriver::handleSetConstantForce(const uint8_t *data, uint16_t len) {
     if (len < sizeof(PIDWheelSetConstantForce)) return;
     auto *d = (const PIDWheelSetConstantForce*)data;
     uint8_t idx = d->effectBlockIndex;
-    if (idx < 1 || idx > PID_MAX_EFFECTS) return;
+    if (idx < 1 || idx > MAX_EFFECTS) return;
     effects[idx - 1].magnitude = d->magnitude;
 }
 
@@ -255,7 +250,7 @@ void PIDWheelDriver::handleSetRamp(const uint8_t *data, uint16_t len) {
     if (len < sizeof(PIDWheelSetRamp)) return;
     auto *d = (const PIDWheelSetRamp*)data;
     uint8_t idx = d->effectBlockIndex;
-    if (idx < 1 || idx > PID_MAX_EFFECTS) return;
+    if (idx < 1 || idx > MAX_EFFECTS) return;
     effects[idx - 1].startLevel = d->startLevel;
     effects[idx - 1].endLevel = d->endLevel;
 }
@@ -267,11 +262,11 @@ void PIDWheelDriver::handleEffectOperation(const uint8_t *data, uint16_t len) {
     uint8_t op = d->operation;
 
     if (op == 2) { // Start Solo — stop all others
-        for (int i = 0; i < PID_MAX_EFFECTS; i++)
+        for (int i = 0; i < MAX_EFFECTS; i++)
             effects[i].state = 0;
     }
 
-    if (idx >= 1 && idx <= PID_MAX_EFFECTS) {
+    if (idx >= 1 && idx <= MAX_EFFECTS) {
         if (op == 1 || op == 2) { // Start / Start Solo
             effects[idx - 1].state = 1;
             effects[idx - 1].startTime = time_us_32() / 1000;
@@ -284,7 +279,7 @@ void PIDWheelDriver::handleEffectOperation(const uint8_t *data, uint16_t len) {
 void PIDWheelDriver::handleBlockFree(const uint8_t *data, uint16_t len) {
     if (len < 1) return;
     uint8_t idx = data[0];
-    if (idx >= 1 && idx <= PID_MAX_EFFECTS) {
+    if (idx >= 1 && idx <= MAX_EFFECTS) {
         memset(&effects[idx - 1], 0, sizeof(PIDEffect));
     }
 }
@@ -295,7 +290,7 @@ void PIDWheelDriver::handleDeviceControl(const uint8_t *data, uint16_t len) {
     if (ctrl & 0x01) actuatorsEnabled = true;   // Enable Actuators
     if (ctrl & 0x02) actuatorsEnabled = false;  // Disable Actuators
     if (ctrl & 0x04) {                           // Stop All Effects
-        for (int i = 0; i < PID_MAX_EFFECTS; i++)
+        for (int i = 0; i < MAX_EFFECTS; i++)
             effects[i].state = 0;
     }
     if (ctrl & 0x08) {                           // Device Reset
@@ -337,7 +332,7 @@ int16_t PIDWheelDriver::calculateForce() {
     uint32_t now_ms = time_us_32() / 1000;
     int32_t currentPosition = inputReport.X;
 
-    for (int i = 0; i < PID_MAX_EFFECTS; i++) {
+    for (int i = 0; i < MAX_EFFECTS; i++) {
         if (!(effects[i].state & 0x01)) continue;
         if (effects[i].type == FFB_EFFECT_NONE) continue;
 
@@ -455,7 +450,7 @@ int16_t PIDWheelDriver::calculateForce() {
 }
 
 uint8_t PIDWheelDriver::allocateEffect() {
-    for (uint8_t i = 0; i < PID_MAX_EFFECTS; i++) {
+    for (uint8_t i = 0; i < MAX_EFFECTS; i++) {
         if (effects[i].type == FFB_EFFECT_NONE && effects[i].state == 0)
             return i + 1;
     }

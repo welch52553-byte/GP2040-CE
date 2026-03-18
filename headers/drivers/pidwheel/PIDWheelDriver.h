@@ -44,11 +44,12 @@ private:
     PIDWheelStateReport stateReport;
     uint8_t last_report[PIDWHEEL_ENDPOINT_SIZE];
 
-    PIDEffect effects[PID_MAX_EFFECTS];
+    PIDEffect effects[MAX_EFFECTS];
     bool actuatorsEnabled;
     bool devicePaused;
     uint8_t deviceGain;
     int16_t lastPosition;
+    uint8_t lastCreatedEffectIdx;
 };
 
 #endif
