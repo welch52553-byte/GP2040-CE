@@ -229,6 +229,7 @@ src/drivers/xboxog/xid/xid_remote.c
 src/drivers/xboxog/xid/xid_steelbattalion.c
 src/drivers/xboxog/xid/xid.c
 src/drivers/xboxog/XboxOriginalDriver.cpp
+src/drivers/pidwheel/PIDWheelDriver.cpp
 src/drivers/xinput/XInputAuth.cpp
 src/drivers/xinput/XInputAuthUSBListener.cpp
 src/drivers/xinput/XInputDriver.cpp
@@ -339,6 +340,7 @@ headers
 headers/addons
 headers/configs
 headers/drivers
+headers/drivers/pidwheel
 headers/drivers/shared
 headers/events
 headers/interfaces

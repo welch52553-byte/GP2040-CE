@@ -25,6 +25,7 @@ export default {
 		psclassic: 'Playstation Classic',
 		xboxoriginal: 'Original Xbox',
 		xbone: 'Xbox One',
+		'hid-wheel': 'HID Racing Wheel (PID FFB)',
 	},
 	'input-mode-group': {
 		primary: 'Primary Input Modes',
