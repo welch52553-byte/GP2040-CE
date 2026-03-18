@@ -75,26 +75,16 @@ void MultiChannelADCInput::setup() {
                 options.brakeRest,      options.brakeActive);
 
     if (options.autoCalibrate) {
+        // Read each channel multiple times with dummy reads for accuracy
         if (steerLeft.enabled)
-            steerLeft.rest_value = readADCOversampled(steerLeft.adc_input, 32);
+            steerLeft.rest_value = readADCOversampled(steerLeft.adc_input, 64);
         if (steerRight.enabled)
-            steerRight.rest_value = readADCOversampled(steerRight.adc_input, 32);
+            steerRight.rest_value = readADCOversampled(steerRight.adc_input, 64);
         if (throttle.enabled)
-            throttle.rest_value = readADCOversampled(throttle.adc_input, 32);
+            throttle.rest_value = readADCOversampled(throttle.adc_input, 64);
         if (brake.enabled)
-            brake.rest_value = readADCOversampled(brake.adc_input, 32);
+            brake.rest_value = readADCOversampled(brake.adc_input, 64);
     }
-}
-
-static void processChannel(hall_channel_t &ch, MultiChannelADCInput *self,
-                            uint8_t oversampling, float smoothing_factor, float deadzone) {
-    if (!ch.enabled) return;
-
-    ch.raw_value = self->readADCOversampled(ch.adc_input, oversampling);
-    ch.activation = self->computeActivation(ch);
-    ch.activation = self->applyEMA(ch.activation, ch.ema_value, smoothing_factor);
-    ch.ema_value = ch.activation;
-    ch.activation = self->applyDeadzone(ch.activation, deadzone);
 }
 
 void MultiChannelADCInput::process() {
@@ -109,10 +99,38 @@ void MultiChannelADCInput::process() {
         joystickMid = DriverManager::getInstance().getDriver()->GetJoystickMidValue();
     }
 
-    processChannel(steerLeft, this, oversampling, smoothing_factor, deadzone);
-    processChannel(steerRight, this, oversampling, smoothing_factor, deadzone);
-    processChannel(throttle, this, oversampling, smoothing_factor, deadzone);
-    processChannel(brake, this, oversampling, smoothing_factor, deadzone);
+    // Read all channels
+    if (steerLeft.enabled) {
+        steerLeft.raw_value = readADCOversampled(steerLeft.adc_input, oversampling);
+        steerLeft.activation = computeActivation(steerLeft);
+        steerLeft.activation = applyEMA(steerLeft.activation, steerLeft.ema_value, smoothing_factor);
+        steerLeft.ema_value = steerLeft.activation;
+        steerLeft.activation = applyDeadzone(steerLeft.activation, deadzone);
+    }
+
+    if (steerRight.enabled) {
+        steerRight.raw_value = readADCOversampled(steerRight.adc_input, oversampling);
+        steerRight.activation = computeActivation(steerRight);
+        steerRight.activation = applyEMA(steerRight.activation, steerRight.ema_value, smoothing_factor);
+        steerRight.ema_value = steerRight.activation;
+        steerRight.activation = applyDeadzone(steerRight.activation, deadzone);
+    }
+
+    if (throttle.enabled) {
+        throttle.raw_value = readADCOversampled(throttle.adc_input, oversampling);
+        throttle.activation = computeActivation(throttle);
+        throttle.activation = applyEMA(throttle.activation, throttle.ema_value, smoothing_factor);
+        throttle.ema_value = throttle.activation;
+        throttle.activation = applyDeadzone(throttle.activation, deadzone);
+    }
+
+    if (brake.enabled) {
+        brake.raw_value = readADCOversampled(brake.adc_input, oversampling);
+        brake.activation = computeActivation(brake);
+        brake.activation = applyEMA(brake.activation, brake.ema_value, smoothing_factor);
+        brake.ema_value = brake.activation;
+        brake.activation = applyDeadzone(brake.activation, deadzone);
+    }
 
     // Steering: combine left + right into Left Stick X axis
     float steerLeftAct  = steerLeft.enabled  ? steerLeft.activation  : 0.0f;
@@ -138,8 +156,6 @@ void MultiChannelADCInput::process() {
 
 #if MULTI_ADC_DEBUG_ENABLED
     Gamepad *procGamepad = Storage::getInstance().GetProcessedGamepad();
-
-    // Print rumble state on every change
     uint16_t curLeft = procGamepad->auxState.haptics.leftActuator.intensity;
     uint16_t curRight = procGamepad->auxState.haptics.rightActuator.intensity;
     if (curLeft != debug_last_rumble_left || curRight != debug_last_rumble_right) {
@@ -152,8 +168,6 @@ void MultiChannelADCInput::process() {
                  procGamepad->auxState.haptics.rightActuator.active ? 1 : 0);
         debug_print(buf);
     }
-
-    // Print ADC + output values every 500ms
     uint32_t now = time_us_32();
     if (now - debug_last_print_time > 500000) {
         debug_last_print_time = now;
@@ -176,6 +190,10 @@ void MultiChannelADCInput::reinit() {
 
 uint16_t MultiChannelADCInput::readADCOversampled(uint8_t adc_input, uint8_t samples) {
     adc_select_input(adc_input);
+    // RP2040 ADC workaround: discard first read after channel switch
+    // to avoid cross-channel voltage residue
+    adc_read();
+
     if (samples <= 1) {
         return adc_read();
     }
@@ -194,9 +212,9 @@ float MultiChannelADCInput::computeActivation(hall_channel_t &ch) {
         static_cast<int32_t>(ch.raw_value) - static_cast<int32_t>(ch.rest_value)
     ) / static_cast<float>(range);
 
-    // Negative activation means the sensor drifted below rest — treat as zero
     if (activation < 0.0f) return 0.0f;
-    return std::min(activation, 1.0f);
+    if (activation > 1.0f) return 1.0f;
+    return activation;
 }
 
 float MultiChannelADCInput::applyEMA(float current, float previous, float factor) {
@@ -204,7 +222,9 @@ float MultiChannelADCInput::applyEMA(float current, float previous, float factor
 }
 
 float MultiChannelADCInput::applyDeadzone(float value, float dz) {
-    if (value < dz) return 0.0f;
-    if (dz >= 1.0f) return value;
-    return (value - dz) / (1.0f - dz);
+    if (value <= dz) return 0.0f;
+    if (dz >= 1.0f) return 0.0f;
+    // Scale remaining range to 0.0-1.0
+    float scaled = (value - dz) / (1.0f - dz);
+    return std::min(scaled, 1.0f);
 }
