@@ -4,8 +4,8 @@
 #include "tusb.h"
 #include <cstdint>
 
-#define PIDWHEEL_VENDOR_ID   0x045E
-#define PIDWHEEL_PRODUCT_ID  0x001A
+#define PIDWHEEL_VENDOR_ID   0x1209
+#define PIDWHEEL_PRODUCT_ID  0xFFB0
 #define PIDWHEEL_JOYSTICK_MID  0x7FFF
 #define PIDWHEEL_ENDPOINT_SIZE 64
 
