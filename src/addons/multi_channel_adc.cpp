@@ -76,13 +76,13 @@ void MultiChannelADCInput::setup() {
 
     if (options.autoCalibrate) {
         if (steerLeft.enabled)
-            steerLeft.rest_value = readADCOversampled(steerLeft.adc_input, 16);
+            steerLeft.rest_value = readADCOversampled(steerLeft.adc_input, 32);
         if (steerRight.enabled)
-            steerRight.rest_value = readADCOversampled(steerRight.adc_input, 16);
+            steerRight.rest_value = readADCOversampled(steerRight.adc_input, 32);
         if (throttle.enabled)
-            throttle.rest_value = readADCOversampled(throttle.adc_input, 16);
+            throttle.rest_value = readADCOversampled(throttle.adc_input, 32);
         if (brake.enabled)
-            brake.rest_value = readADCOversampled(brake.adc_input, 16);
+            brake.rest_value = readADCOversampled(brake.adc_input, 32);
     }
 }
 
@@ -194,7 +194,9 @@ float MultiChannelADCInput::computeActivation(hall_channel_t &ch) {
         static_cast<int32_t>(ch.raw_value) - static_cast<int32_t>(ch.rest_value)
     ) / static_cast<float>(range);
 
-    return std::clamp(activation, 0.0f, 1.0f);
+    // Negative activation means the sensor drifted below rest — treat as zero
+    if (activation < 0.0f) return 0.0f;
+    return std::min(activation, 1.0f);
 }
 
 float MultiChannelADCInput::applyEMA(float current, float previous, float factor) {
