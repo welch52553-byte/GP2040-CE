@@ -70,17 +70,17 @@
 // ACTIVE = ADC reading when key is FULLY pressed
 // Adjust these values based on your actual hall sensor measurements!
 // Tip: use a serial monitor to read raw ADC values at rest and pressed states
-#define MULTI_ADC_STEER_LEFT_REST    512
-#define MULTI_ADC_STEER_LEFT_ACTIVE  3584
+#define MULTI_ADC_STEER_LEFT_REST    2414
+#define MULTI_ADC_STEER_LEFT_ACTIVE  4076
 
-#define MULTI_ADC_STEER_RIGHT_REST   512
-#define MULTI_ADC_STEER_RIGHT_ACTIVE 3584
+#define MULTI_ADC_STEER_RIGHT_REST   2414
+#define MULTI_ADC_STEER_RIGHT_ACTIVE 4076
 
-#define MULTI_ADC_THROTTLE_REST      512
-#define MULTI_ADC_THROTTLE_ACTIVE    3584
+#define MULTI_ADC_THROTTLE_REST      2414
+#define MULTI_ADC_THROTTLE_ACTIVE    4076
 
-#define MULTI_ADC_BRAKE_REST         512
-#define MULTI_ADC_BRAKE_ACTIVE       3584
+#define MULTI_ADC_BRAKE_REST         2414
+#define MULTI_ADC_BRAKE_ACTIVE       4076
 
 // Auto-calibrate REST values on startup (reads ADC when keys are released)
 #define MULTI_ADC_AUTO_CALIBRATE_REST 1

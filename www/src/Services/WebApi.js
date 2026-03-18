@@ -655,6 +655,10 @@ async function setHETriggerOptions(settings) {
 	return Http.post(`${baseUrl}/api/setHETriggerOptions`, settings);
 }
 
+async function getMcadcVoltage(settings) {
+	return Http.post(`${baseUrl}/api/getMcadcVoltage`, settings);
+}
+
 async function getHETriggerCalibrations() {
 	try {
 		const response = await Http.get(`${baseUrl}/api/getHETriggerCalibrations`);
@@ -734,6 +738,7 @@ export default {
 	setHETriggerCalibrations,
 	getHETriggerCalibrations,
 	setHETriggerOptions,
+	getMcadcVoltage,
 	getReactiveLEDs,
 	setReactiveLEDs,
 	getButtonLayouts,

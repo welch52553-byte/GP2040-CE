@@ -2715,6 +2715,42 @@ std:: string getJoystickCenter2() {
     return serialize_json(doc);
 }
 
+std::string getMcadcVoltage()
+{
+    DynamicJsonDocument postDoc = get_post_data();
+    int32_t channel = postDoc["channel"];
+    const size_t capacity = JSON_OBJECT_SIZE(10);
+    DynamicJsonDocument doc(capacity);
+
+    const MultiChannelADCOptions& options = Storage::getInstance().getAddonOptions().multiChannelADCOptions;
+
+    Pin_t pin = -1;
+    switch (channel) {
+        case 0: pin = options.steerLeftPin; break;
+        case 1: pin = options.steerRightPin; break;
+        case 2: pin = options.throttlePin; break;
+        case 3: pin = options.brakePin; break;
+        default:
+            doc["error"] = "invalid channel (0-3)";
+            return serialize_json(doc);
+    }
+
+    if (pin < 26 || pin > 29) {
+        doc["error"] = "pin not configured";
+        return serialize_json(doc);
+    }
+
+    adc_gpio_init(pin);
+    adc_select_input(pin - 26);
+    uint32_t sum = 0;
+    for (int i = 0; i < 8; i++) {
+        sum += adc_read();
+    }
+    doc["voltage"] = (uint16_t)(sum / 8);
+    doc["channel"] = channel;
+    return serialize_json(doc);
+}
+
 typedef std::string (*HandlerFuncPtr)();
 static const std::pair<const char*, HandlerFuncPtr> handlerFuncs[] =
 {
@@ -2735,6 +2771,7 @@ static const std::pair<const char*, HandlerFuncPtr> handlerFuncs[] =
     { "/api/getHETriggerCalibrations", getHETriggerCalibrations },
     { "/api/getHETriggerVoltage", getHETriggerVoltage },
     { "/api/setHETriggerOptions", setHETriggerOptions },
+    { "/api/getMcadcVoltage", getMcadcVoltage },
     { "/api/setReactiveLEDs", setReactiveLEDs },
     { "/api/getReactiveLEDs", getReactiveLEDs },
     { "/api/setKeyMappings", setKeyMappings },
