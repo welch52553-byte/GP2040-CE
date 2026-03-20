@@ -1,0 +1,56 @@
+; GP2040-CE Racing Wheel Driver Installation File
+; For Windows 10/11
+; Install: Right-click this file and select "Install"
+
+[Version]
+Signature="$Windows NT$"
+Class=HIDClass
+ClassGuid={745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Provider=%MFGNAME%
+CatalogFile=GP2040RacingWheel.cat
+DriverVer=03/19/2026,1.0.0.0
+
+[Manufacturer]
+%MFGNAME%=DeviceList, NTAMD64, NTARM64
+
+[SourceDisksNames]
+1=%INSTDISK%,,,
+
+[SourceDisksFiles]
+
+[DestinationDirs]
+DefaultDestDir=12
+
+; ================= Device List =================
+[DeviceList.NTAMD64]
+%DESCRIPTION%=DriverInstall, USB\VID_1209&PID_FFB0
+
+[DeviceList.NTARM64]
+%DESCRIPTION%=DriverInstall, USB\VID_1209&PID_FFB0
+
+; ================= Driver Install =================
+[DriverInstall]
+include=hidclass.inf
+CopyFiles=FakeModemCopyFileSection
+AddReg=DriverInstall.AddReg
+
+[DriverInstall.AddReg]
+HKR,,FriendlyName,,%DESCRIPTION%
+
+[DriverInstall.Services]
+include=hidclass.inf
+AddService=HidUsb,0x00000002,HidUsb_ServiceInstall
+
+[HidUsb_ServiceInstall]
+DisplayName    = %HidUsb.SvcDesc%
+ServiceType    = 1
+StartType      = 3
+ErrorControl   = 1
+ServiceBinary  = %12%\hidusb.sys
+
+; ================= Strings =================
+[Strings]
+MFGNAME="Open Stick Community"
+INSTDISK="GP2040-CE Installation Disk"
+DESCRIPTION="GP2040-CE Racing Wheel"
+HidUsb.SvcDesc="Microsoft HID Class Driver"
